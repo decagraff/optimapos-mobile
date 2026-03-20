@@ -11,9 +11,11 @@ interface Props {
 }
 
 export default function ProductCard({ product, onPress, baseUrl }: Props) {
+  const price = Number(product.price) || 0;
+  const promo = product.promoPrice != null ? Number(product.promoPrice) : null;
   const outOfStock = product.stockEnabled && (product.stockCurrent ?? 0) <= 0;
-  const hasPromo = product.promoPrice != null && product.promoPrice < product.price;
-  const displayPrice = hasPromo ? product.promoPrice! : product.price;
+  const hasPromo = promo != null && promo < price;
+  const displayPrice = hasPromo ? promo! : price;
   const hasVariants = product.variants.length > 0;
   const imageUri = product.image ? `${baseUrl}${product.image}` : null;
 
@@ -43,11 +45,11 @@ export default function ProductCard({ product, onPress, baseUrl }: Props) {
         ) : null}
         <View style={styles.priceRow}>
           {hasVariants ? (
-            <Text style={styles.priceFrom}>Desde S/ {Math.min(displayPrice, ...product.variants.map(v => v.price)).toFixed(2)}</Text>
+            <Text style={styles.priceFrom}>Desde S/ {Math.min(displayPrice, ...product.variants.map(v => Number(v.price) || 0)).toFixed(2)}</Text>
           ) : (
             <>
               <Text style={styles.price}>S/ {displayPrice.toFixed(2)}</Text>
-              {hasPromo && <Text style={styles.oldPrice}>S/ {product.price.toFixed(2)}</Text>}
+              {hasPromo && <Text style={styles.oldPrice}>S/ {price.toFixed(2)}</Text>}
             </>
           )}
         </View>

@@ -24,12 +24,12 @@ export default function ProductDetail({ product, visible, onClose, onAdd, baseUr
 
   const hasVariants = product.variants.length > 0;
   const variant = hasVariants ? product.variants.find(v => v.id === selectedVariantId) : undefined;
-  const basePrice = variant ? variant.price : (product.promoPrice ?? product.price);
+  const basePrice = variant ? Number(variant.price) || 0 : Number(product.promoPrice ?? product.price) || 0;
 
   const addonsTotal = Array.from(selectedAddons.entries()).reduce((sum, [addonId, qty]) => {
     for (const ag of product.addonGroups) {
       const addon = ag.addonGroup.addons.find(a => a.id === addonId);
-      if (addon) return sum + addon.price * qty;
+      if (addon) return sum + (Number(addon.price) || 0) * qty;
     }
     return sum;
   }, 0);
@@ -125,7 +125,7 @@ export default function ProductDetail({ product, visible, onClose, onAdd, baseUr
                       {selectedVariantId === v.id && <View style={styles.radioDot} />}
                     </View>
                     <Text style={styles.optionName}>{v.name}</Text>
-                    <Text style={styles.optionPrice}>S/ {v.price.toFixed(2)}</Text>
+                    <Text style={styles.optionPrice}>S/ {(Number(v.price) || 0).toFixed(2)}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -147,7 +147,7 @@ export default function ProductDetail({ product, visible, onClose, onAdd, baseUr
                         {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
                       </View>
                       <Text style={styles.optionName}>{addon.name}</Text>
-                      {addon.price > 0 && <Text style={styles.optionPrice}>+ S/ {addon.price.toFixed(2)}</Text>}
+                      {Number(addon.price) > 0 && <Text style={styles.optionPrice}>+ S/ {(Number(addon.price) || 0).toFixed(2)}</Text>}
                     </Pressable>
                   );
                 })}
