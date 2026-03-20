@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pre
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
+import { api } from '@/services/api';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { LogIn } from 'lucide-react-native';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, selectLocation } = useAuth();
   const { config, disconnect } = useServer();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,12 +25,21 @@ export default function LoginScreen() {
     try {
       const user = await login(email.trim(), password);
 
-      // Check if location selection is needed
-      if (user.locationIds.length > 1) {
-        router.replace('/location-select');
-      } else {
-        router.replace('/(tabs)');
-      }
+      // Fetch actual locations to decide if selector is needed
+      try {
+        const locations = await api.getLocations();
+        const activeLocations = locations.filter(l => l.isActive);
+        if (activeLocations.length > 1) {
+          router.replace('/location-select');
+          return;
+        }
+        // Only 1 location — auto-select it
+        if (activeLocations.length === 1) {
+          await selectLocation(activeLocations[0].id);
+        }
+      } catch {}
+
+      router.replace('/(tabs)');
     } catch (e: any) {
       setError(e.message || 'Error al iniciar sesión');
     } finally {

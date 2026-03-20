@@ -38,16 +38,18 @@ export default function SplashRouter() {
       }
 
       // Check if location selection is needed
-      const locIds = user?.locationIds || [];
-      if (locIds.length > 1) {
-        // Check if they already selected one
-        const { storage } = await import('@/services/storage');
-        const saved = await storage.getLocationId();
-        if (!saved) {
-          router.replace('/location-select');
-          return;
+      try {
+        const locations = await api.getLocations();
+        const activeLocations = locations.filter((l: any) => l.isActive);
+        if (activeLocations.length > 1) {
+          const { storage } = await import('@/services/storage');
+          const saved = await storage.getLocationId();
+          if (!saved) {
+            router.replace('/location-select');
+            return;
+          }
         }
-      }
+      } catch {}
 
       router.replace('/(tabs)');
     })();
