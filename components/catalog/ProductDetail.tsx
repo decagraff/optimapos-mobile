@@ -114,7 +114,7 @@ export default function ProductDetail({ product, visible, onClose, onAdd, baseUr
             {/* Variants */}
             {hasVariants && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tamaño / Variante</Text>
+                <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>Tamaño / Variante</Text>
                 {product.variants.filter(v => v.isActive).map(v => (
                   <Pressable
                     key={v.id}
@@ -132,31 +132,65 @@ export default function ProductDetail({ product, visible, onClose, onAdd, baseUr
             )}
 
             {/* Addon Groups */}
-            {product.addonGroups.map(({ addonGroup }) => (
-              <View key={addonGroup.id} style={styles.section}>
-                <Text style={styles.sectionTitle}>{addonGroup.name}</Text>
-                {addonGroup.addons.filter(a => a.isActive).map(addon => {
-                  const isSelected = selectedAddons.has(addon.id);
-                  return (
-                    <Pressable
-                      key={addon.id}
-                      style={[styles.option, isSelected && styles.optionSelected]}
-                      onPress={() => toggleAddon(addon.id)}
-                    >
-                      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                        {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
-                      </View>
-                      <Text style={styles.optionName}>{addon.name}</Text>
-                      {Number(addon.price) > 0 && <Text style={styles.optionPrice}>+ S/ {(Number(addon.price) || 0).toFixed(2)}</Text>}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
+            {product.addonGroups.map(({ addonGroup }) => {
+              const isCourtesy = addonGroup.isCourtesy || false;
+              const courtesyLimit = addonGroup.courtesyLimit || 0;
+              const selectedInGroup = addonGroup.addons
+                .filter(a => selectedAddons.has(a.id))
+                .reduce((sum, a) => sum + (selectedAddons.get(a.id) || 0), 0);
+              const freeRemaining = isCourtesy && courtesyLimit > 0 ? Math.max(0, courtesyLimit - selectedInGroup) : 0;
+              const limitExceeded = isCourtesy && courtesyLimit > 0 && selectedInGroup > courtesyLimit;
+
+              return (
+                <View key={addonGroup.id} style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>{addonGroup.name}</Text>
+                    {isCourtesy && courtesyLimit > 0 && (
+                      <Text style={[styles.courtesyBadge, freeRemaining === 0 && styles.courtesyBadgeExhausted]}>
+                        {freeRemaining > 0 ? `${freeRemaining} gratis` : 'Límite alcanzado'}
+                      </Text>
+                    )}
+                    {isCourtesy && courtesyLimit === 0 && (
+                      <Text style={styles.courtesyBadgeFree}>Gratis</Text>
+                    )}
+                  </View>
+                  {limitExceeded && (
+                    <Text style={styles.courtesyWarning}>
+                      Incluye {courtesyLimit} gratis · extras se cobran
+                    </Text>
+                  )}
+                  {addonGroup.addons.filter(a => a.isActive).map(addon => {
+                    const isSelected = selectedAddons.has(addon.id);
+                    const selectedBefore = addonGroup.addons
+                      .filter(a => a.id !== addon.id && selectedAddons.has(a.id))
+                      .reduce((sum, a) => sum + (selectedAddons.get(a.id) || 0), 0);
+                    const isFree = isCourtesy && (courtesyLimit === 0 || (isSelected && selectedBefore < courtesyLimit));
+
+                    return (
+                      <Pressable
+                        key={addon.id}
+                        style={[styles.option, isSelected && styles.optionSelected]}
+                        onPress={() => toggleAddon(addon.id)}
+                      >
+                        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                          {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+                        </View>
+                        <Text style={styles.optionName}>{addon.name}</Text>
+                        {isFree ? (
+                          <Text style={styles.optionPriceFree}>Gratis</Text>
+                        ) : (
+                          Number(addon.price) > 0 && <Text style={styles.optionPrice}>+ S/ {(Number(addon.price) || 0).toFixed(2)}</Text>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              );
+            })}
 
             {/* Notes */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notas</Text>
+              <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>Notas</Text>
               <TextInput
                 style={styles.notesInput}
                 value={notes}
@@ -221,7 +255,13 @@ const styles = StyleSheet.create({
   description: { fontSize: FontSizes.md, color: Colors.textSecondary, lineHeight: 20, marginBottom: Spacing.sm },
   ingredients: { fontSize: FontSizes.sm, color: Colors.textTertiary, fontStyle: 'italic', marginBottom: Spacing.md },
   section: { marginTop: Spacing.xl },
-  sectionTitle: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text, marginBottom: Spacing.md, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
+  sectionTitle: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitleStandalone: { marginBottom: Spacing.md },
+  courtesyBadge: { fontSize: FontSizes.xs, fontWeight: '600', color: '#D97706' },
+  courtesyBadgeExhausted: { color: '#DC2626' },
+  courtesyBadgeFree: { fontSize: FontSizes.xs, fontWeight: '600', color: '#059669' },
+  courtesyWarning: { fontSize: FontSizes.xs, color: '#DC2626', marginBottom: Spacing.sm },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -259,6 +299,7 @@ const styles = StyleSheet.create({
   checkboxSelected: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   optionName: { flex: 1, fontSize: FontSizes.md, color: Colors.text },
   optionPrice: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.accent },
+  optionPriceFree: { fontSize: FontSizes.md, fontWeight: '600', color: '#059669' },
   notesInput: {
     backgroundColor: Colors.card,
     borderRadius: Radii.sm,

@@ -64,6 +64,8 @@ export interface AddonGroup {
   name: string;
   type: 'ADDITION' | 'SUBSTITUTION';
   isActive: boolean;
+  isCourtesy?: boolean;
+  courtesyLimit?: number;
   addons: Addon[];
 }
 
