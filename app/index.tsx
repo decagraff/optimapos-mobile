@@ -1,0 +1,82 @@
+import { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useServer } from '@/hooks/useServer';
+import { useAuth } from '@/hooks/useAuth';
+import { Colors, FontSizes, Spacing } from '@/constants/theme';
+import { api } from '@/services/api';
+
+SplashScreen.preventAutoHideAsync();
+
+export default function SplashRouter() {
+  const { isLoading: serverLoading, isConfigured } = useServer();
+  const { isLoading: authLoading, isAuthenticated, user } = useAuth();
+
+  useEffect(() => {
+    if (serverLoading || authLoading) return;
+
+    (async () => {
+      await SplashScreen.hideAsync();
+
+      if (!isConfigured) {
+        router.replace('/setup');
+        return;
+      }
+
+      // Validate server is reachable
+      try {
+        await api.health();
+      } catch {
+        router.replace('/setup');
+        return;
+      }
+
+      if (!isAuthenticated) {
+        router.replace('/login');
+        return;
+      }
+
+      // Check if location selection is needed
+      const locIds = user?.locationIds || [];
+      if (locIds.length > 1) {
+        // Check if they already selected one
+        const { storage } = await import('@/services/storage');
+        const saved = await storage.getLocationId();
+        if (!saved) {
+          router.replace('/location-select');
+          return;
+        }
+      }
+
+      router.replace('/(tabs)');
+    })();
+  }, [serverLoading, authLoading, isConfigured, isAuthenticated, user]);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.logo}>OptimaPOS</Text>
+      <Text style={styles.subtitle}>Punto de venta para restaurantes</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontSize: FontSizes.md,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: Spacing.sm,
+  },
+});

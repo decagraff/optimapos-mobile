@@ -1,35 +1,61 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAuth } from '@/hooks/useAuth';
+import { TAB_CONFIG, ALL_TAB_NAMES } from '@/utils/roles';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { Role } from '@/types';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { user } = useAuth();
+  const role: Role = (user?.role as Role) || 'CLIENT';
+  const visibleTabs = TAB_CONFIG[role] || TAB_CONFIG.CLIENT;
+  const visibleNames = new Set(visibleTabs.map(t => t.name));
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+        tabBarActiveTintColor: Colors.tabActive,
+        tabBarInactiveTintColor: Colors.tabInactive,
+        tabBarStyle: {
+          backgroundColor: Colors.card,
+          borderTopColor: Colors.border,
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+        headerStyle: {
+          backgroundColor: Colors.card,
+        },
+        headerTitleStyle: {
+          fontWeight: '700',
+          color: Colors.text,
+          fontSize: 18,
+        },
+        headerShadowVisible: false,
+      }}
+    >
+      {ALL_TAB_NAMES.map(tabName => {
+        const config = visibleTabs.find(t => t.name === tabName);
+        const Icon = config?.icon;
+
+        return (
+          <Tabs.Screen
+            key={tabName}
+            name={tabName}
+            options={{
+              href: visibleNames.has(tabName) ? undefined : null,
+              title: config?.title ?? tabName,
+              tabBarIcon: Icon
+                ? ({ color, size }) => <Icon size={size || 24} color={color} />
+                : undefined,
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }

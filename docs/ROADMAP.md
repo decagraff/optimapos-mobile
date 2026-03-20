@@ -555,13 +555,61 @@ components/
 
 ---
 
-## Distribución
+## Distribución y Actualizaciones
 
-- **Android:** APK directo (sin Play Store)
-  - Build: `eas build --platform android --profile preview`
-  - O local: `npx expo run:android` → genera APK
-- **iOS:** TestFlight o ad-hoc (requiere Apple Developer $99/año — futuro)
-- **Updates OTA:** expo-updates (Fase 7) para parches sin reinstalar
+### Canales de distribución
+
+- **Android:**
+  - Fase inicial: APK directo (build: `eas build --platform android --profile preview`)
+  - Producción: Google Play Store (requiere cuenta $25 una vez)
+  - Build local: `npx expo run:android` → genera APK
+- **iOS:** TestFlight → App Store (requiere Apple Developer $99/año — futuro)
+
+### Estrategia de Versionamiento
+
+La app usa **semver** (`MAJOR.MINOR.PATCH`):
+- **MAJOR** — cambios incompatibles (nueva arquitectura, breaking changes en API)
+- **MINOR** — nuevas funcionalidades (nuevo perfil, nuevo módulo)
+- **PATCH** — bugfixes y mejoras menores
+
+### Estrategia de Actualización
+
+A diferencia de web (donde el usuario siempre ve la versión más reciente), en móvil el usuario controla cuándo actualizar. Para manejar esto:
+
+#### 1. Thin Client — lógica en el backend
+- La app es principalmente interfaz visual
+- Menú, precios, configuración, flujos de pedido vienen del API
+- Minimiza la necesidad de actualizar la app para cambios de negocio
+- Regla: si un cambio puede vivir en el backend, NO va en la app
+
+#### 2. Control de versión mínima (Force Update)
+- Backend expone `GET /api/app/version` con:
+  - `minVersion` — versión mínima requerida (cambios críticos/seguridad)
+  - `latestVersion` — última versión disponible
+  - `updateUrl` — link a Play Store / APK
+- Al abrir la app, compara su versión con `minVersion`
+- Si `appVersion < minVersion` → pantalla bloqueante "Actualiza tu app" (no puede continuar)
+- Si `appVersion < latestVersion` pero `>= minVersion` → banner suave "Hay una actualización disponible" (puede ignorar)
+
+#### 3. OTA Updates (sin pasar por la tienda)
+- **EAS Update** (Expo) permite enviar cambios de JS/assets sin publicar nueva versión en la tienda
+- Funciona para: cambios de UI, textos, lógica JS, estilos, nuevas pantallas
+- NO funciona para: nuevos permisos nativos, nuevos plugins nativos, cambios en app.json
+- Ideal para hotfixes urgentes — el usuario ve el cambio al abrir la app
+- Configurar en `app.json`: `"updates": { "url": "...", "fallbackToCacheTimeout": 0 }`
+
+#### 4. Cadencia de releases
+- **Release mayor (tienda):** cada 2-4 semanas — features nuevas, cambios nativos
+- **OTA hotfix:** inmediato cuando sea necesario — bugfixes de UI/lógica
+- **Force update:** solo para cambios críticos de seguridad o API breaking changes
+
+#### 5. Flujo de actualización del usuario
+```
+App abre → Fetch /api/app/version
+  ├─ appVersion < minVersion → Pantalla "Actualiza" (bloqueante)
+  ├─ appVersion < latestVersion → Banner "Nueva versión disponible" (dismissable)
+  └─ Al día → Check OTA update silencioso → Aplicar en próximo reinicio
+```
 
 ---
 
@@ -570,10 +618,12 @@ components/
 Estos cambios se hacen en el repo principal `optimapos` (backend + frontend web):
 
 ### Backend
+- [x] Endpoint: generar QR por mesa (`GET /api/tables/:id/qr`) — devuelve data URL PNG
+- [x] Endpoint: generar todos los QR de mesas (`GET /api/tables/qr-all`)
+- [x] Endpoint: QR del menú por local (`GET /api/locations/:id/qr`)
+- [x] Endpoints públicos de mesas (`GET /api/tables/public`, `GET /api/tables/public/:id`)
 - [ ] Endpoint: pedido como invitado (`POST /api/orders/guest`) — sin auth, solo nombre+teléfono
-- [ ] Endpoint: generar QR por mesa (`GET /api/tables/:id/qr`) — devuelve PNG/SVG
-- [ ] Endpoint: generar PDF con todos los QR de un local (`GET /api/locations/:id/qr-pdf`)
-- [ ] Modelo: `GuestOrder` o campo `guestName`/`guestPhone` en Order (ya existe parcialmente)
+- [ ] Endpoint: generar PDF con todos los QR de un local
 - [ ] Modelo: `UserAddress` — direcciones guardadas del cliente
 - [ ] Modelo: `UserFavorite` — productos favoritos del cliente
 - [ ] Endpoint: CRUD direcciones del cliente (`/api/user/addresses`)
@@ -581,20 +631,22 @@ Estos cambios se hacen en el repo principal `optimapos` (backend + frontend web)
 - [ ] Endpoint: historial de pedidos del cliente (`/api/user/orders`)
 - [ ] Endpoint: repetir pedido (`POST /api/orders/repeat/:orderId`)
 - [ ] Endpoint: registro de device token para push (`POST /api/user/device-token`)
+- [ ] Endpoint: `GET /api/app/version` — control de versión mínima y force update
 - [ ] Firebase Admin SDK para enviar push notifications
 - [ ] Deep link universal: configurar `.well-known/assetlinks.json` (Android)
 
 ### Frontend Web (Admin)
-- [ ] Mesas → botón "Descargar QR" por mesa
-- [ ] Mesas → botón "Descargar todos los QR" → PDF
-- [ ] Local → "QR del menú" general
-- [ ] Preview del QR antes de descargar
+- [x] Mesas → botón "Ver QR" por mesa + modal con preview
+- [x] Mesas → botón "QR de todas" → página imprimible con todos los QR
+- [x] Locales → botón "QR del menú" por local + modal con preview + descarga PNG + copiar URL
+- [ ] QR de descarga de app (cuando la app esté lista)
 
 ### Frontend Web (Menú público)
-- [ ] Ruta `/m/:mesaId` — menú con mesa preseleccionada
-- [ ] Ruta `/menu` — menú general del local
+- [x] Ruta `/m/:mesaId` — menú con mesa preseleccionada (DINE_IN)
+- [x] Ruta `/menu?l={locationId}` — menú del local específico
+- [x] Checkout DINE_IN: sin pago, sin WhatsApp, confirma directo a cocina
+- [x] Página de confirmación contextual (DINE_IN vs delivery/pickup)
 - [ ] Catálogo completo responsive (categorías, productos, variantes, addons)
-- [ ] Carrito + checkout (invitado o registrado)
 - [ ] Vista de estado del pedido post-compra (tracking)
 - [ ] Banner "Descarga la app para pedir más rápido"
 - [ ] PWA-ready: se puede agregar a home screen
