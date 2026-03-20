@@ -1,4 +1,4 @@
-import type { LoginResponse, Location, User } from '@/types';
+import type { LoginResponse, Location, User, Product, Category, Table, Order } from '@/types';
 
 class ApiError extends Error {
   status: number;
@@ -93,6 +93,33 @@ class ApiClient {
 
   async getLocations(): Promise<Location[]> {
     return this.get('/api/locations');
+  }
+
+  async getCategories(locationId?: number): Promise<Category[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/categories${q}`);
+  }
+
+  async getProducts(locationId?: number, categoryId?: number): Promise<Product[]> {
+    const params = new URLSearchParams();
+    if (locationId) params.set('locationId', String(locationId));
+    if (categoryId) params.set('categoryId', String(categoryId));
+    const q = params.toString() ? `?${params}` : '';
+    return this.get(`/api/products${q}`);
+  }
+
+  async getTables(locationId?: number): Promise<Table[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/tables${q}`);
+  }
+
+  async getMyOrders(): Promise<Order[]> {
+    const res = await this.get<{ orders: Order[] }>('/api/orders/my');
+    return res.orders || [];
+  }
+
+  async createOrder(data: any): Promise<{ order: Order; whatsappLink?: string }> {
+    return this.post('/api/orders', data);
   }
 }
 

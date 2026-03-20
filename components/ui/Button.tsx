@@ -14,6 +14,7 @@ interface ButtonProps {
   icon?: LucideIcon;
   fullWidth?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  style?: ViewStyle;
 }
 
 const variantStyles: Record<Variant, { bg: string; bgPressed: string; text: string; border?: string }> = {
@@ -31,7 +32,7 @@ const sizeStyles: Record<string, { py: number; px: number; fontSize: number; ico
   lg: { py: Spacing.lg, px: Spacing.xxl, fontSize: FontSizes.lg, iconSize: 20 },
 };
 
-export default function Button({ title, onPress, variant = 'primary', loading, disabled, icon: Icon, fullWidth, size = 'md' }: ButtonProps) {
+export default function Button({ title, onPress, variant = 'primary', loading, disabled, icon: Icon, fullWidth, size = 'md', style: extraStyle }: ButtonProps) {
   const v = variantStyles[variant];
   const s = sizeStyles[size];
   const isDisabled = disabled || loading;
@@ -51,6 +52,7 @@ export default function Button({ title, onPress, variant = 'primary', loading, d
           opacity: isDisabled ? 0.5 : 1,
         },
         fullWidth && styles.fullWidth,
+        extraStyle,
       ] as ViewStyle[]}
     >
       {loading ? (
