@@ -83,6 +83,10 @@ class ApiClient {
     return this.post('/api/auth/login', { email, password });
   }
 
+  async register(data: { name: string; email: string; phone: string; password: string }): Promise<LoginResponse> {
+    return this.post('/api/auth/register', data);
+  }
+
   async getProfile(): Promise<User> {
     return this.get('/api/auth/me');
   }

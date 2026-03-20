@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   selectedLocationId: number | null;
   login: (email: string, password: string) => Promise<User>;
+  register: (data: { name: string; email: string; phone: string; password: string }) => Promise<User>;
   logout: () => Promise<void>;
   selectLocation: (id: number) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -24,6 +25,7 @@ export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   selectedLocationId: null,
   login: async () => { throw new Error('Not initialized'); },
+  register: async () => { throw new Error('Not initialized'); },
   logout: async () => {},
   selectLocation: async () => {},
   refreshProfile: async () => {},
@@ -102,6 +104,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.user;
   }, []);
 
+  const register = useCallback(async (data: { name: string; email: string; phone: string; password: string }): Promise<User> => {
+    const result = await api.register(data);
+    api.setToken(result.token);
+    await storage.setToken(result.token);
+    await storage.setUser(result.user);
+    setUser(result.user as User);
+    setToken(result.token);
+    return result.user as User;
+  }, []);
+
   const logout = useCallback(async () => {
     await storage.clearAuth();
     api.setToken(null);
@@ -124,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, token, isLoading, isAuthenticated: !!user && !!token,
-      selectedLocationId, login, logout, selectLocation, refreshProfile,
+      selectedLocationId, login, register, logout, selectLocation, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

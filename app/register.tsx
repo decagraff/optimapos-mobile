@@ -3,53 +3,46 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pre
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
-import { api } from '@/services/api';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { LogIn } from 'lucide-react-native';
+import { UserPlus } from 'lucide-react-native';
 
-export default function LoginScreen() {
-  const { login, selectLocation } = useAuth();
-  const { config, disconnect } = useServer();
+export default function RegisterScreen() {
+  const { register } = useAuth();
+  const { config } = useServer();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password) return;
+  const validate = (): string | null => {
+    if (!name.trim()) return 'Ingresa tu nombre';
+    if (!email.trim()) return 'Ingresa tu email';
+    if (!phone.trim()) return 'Ingresa tu teléfono';
+    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+    if (password !== confirmPassword) return 'Las contraseñas no coinciden';
+    return null;
+  };
+
+  const handleRegister = async () => {
+    const err = validate();
+    if (err) { setError(err); return; }
+
     setLoading(true);
     setError('');
 
     try {
-      const user = await login(email.trim(), password);
-
-      // Fetch actual locations to decide if selector is needed
-      try {
-        const locations = await api.getLocations();
-        const activeLocations = locations.filter(l => l.isActive);
-        if (activeLocations.length > 1) {
-          router.replace('/location-select');
-          return;
-        }
-        // Only 1 location — auto-select it
-        if (activeLocations.length === 1) {
-          await selectLocation(activeLocations[0].id);
-        }
-      } catch {}
-
+      await register({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password });
       router.replace('/(tabs)');
     } catch (e: any) {
-      setError(e.message || 'Error al iniciar sesión');
+      setError(e.message || 'Error al crear cuenta');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChangeServer = async () => {
-    await disconnect();
-    router.replace('/setup');
   };
 
   return (
@@ -74,11 +67,11 @@ export default function LoginScreen() {
         {/* Form */}
         <View style={styles.card}>
           <View style={styles.iconWrap}>
-            <LogIn size={28} color={Colors.accent} />
+            <UserPlus size={28} color={Colors.accent} />
           </View>
-          <Text style={styles.title}>Iniciar sesión</Text>
+          <Text style={styles.title}>Crear cuenta</Text>
           <Text style={styles.subtitle}>
-            Ingresa tus credenciales para acceder
+            Regístrate para hacer pedidos
           </Text>
 
           {error ? (
@@ -86,6 +79,15 @@ export default function LoginScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
+
+          <Input
+            label="Nombre completo"
+            placeholder="Juan Pérez"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            textContentType="name"
+          />
 
           <Input
             label="Email"
@@ -99,33 +101,47 @@ export default function LoginScreen() {
           />
 
           <Input
+            label="Teléfono"
+            placeholder="987 654 321"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+          />
+
+          <Input
             label="Contraseña"
-            placeholder="••••••••"
+            placeholder="Mínimo 6 caracteres"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            textContentType="password"
+            textContentType="newPassword"
+          />
+
+          <Input
+            label="Confirmar contraseña"
+            placeholder="Repite tu contraseña"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            textContentType="newPassword"
             returnKeyType="go"
-            onSubmitEditing={handleLogin}
+            onSubmitEditing={handleRegister}
           />
 
           <Button
-            title="Iniciar sesión"
-            onPress={handleLogin}
+            title="Crear cuenta"
+            onPress={handleRegister}
             loading={loading}
-            disabled={!email.trim() || !password}
+            disabled={!name.trim() || !email.trim() || !phone.trim() || !password || !confirmPassword}
             fullWidth
             size="lg"
-            icon={LogIn}
+            icon={UserPlus}
           />
 
-          <Pressable onPress={() => router.push('/register')} style={styles.switchLink}>
-            <Text style={styles.switchText}>¿No tienes cuenta? </Text>
-            <Text style={styles.switchTextBold}>Regístrate</Text>
-          </Pressable>
-
-          <Pressable onPress={handleChangeServer} style={styles.changeServer}>
-            <Text style={styles.changeServerText}>Cambiar restaurante</Text>
+          <Pressable onPress={() => router.back()} style={styles.switchLink}>
+            <Text style={styles.switchText}>¿Ya tienes cuenta? </Text>
+            <Text style={styles.switchTextBold}>Inicia sesión</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -135,16 +151,14 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Colors.primary },
-  container: {
-    flexGrow: 1,
-  },
+  container: { flexGrow: 1 },
   header: {
-    paddingTop: 80,
-    paddingBottom: 40,
+    paddingTop: 60,
+    paddingBottom: 24,
     alignItems: 'center',
   },
   logo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 1,
@@ -167,7 +181,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Radii.xl,
     borderTopRightRadius: Radii.xl,
     padding: Spacing.xxl,
-    paddingTop: Spacing.xxxl,
+    paddingTop: Spacing.xxl,
   },
   iconWrap: {
     width: 56,
@@ -191,7 +205,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.xxl,
-    lineHeight: 20,
   },
   errorBox: {
     backgroundColor: Colors.dangerLight,
@@ -215,18 +228,8 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
   },
   switchTextBold: {
-    color: Colors.accent,
+    color: Colors.primary,
     fontSize: FontSizes.sm,
     fontWeight: '600',
-  },
-  changeServer: {
-    alignSelf: 'center',
-    marginTop: Spacing.md,
-    padding: Spacing.sm,
-  },
-  changeServerText: {
-    color: Colors.textTertiary,
-    fontSize: FontSizes.sm,
-    textDecorationLine: 'underline',
   },
 });
