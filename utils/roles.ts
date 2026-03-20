@@ -24,23 +24,28 @@ export const TAB_CONFIG: Record<Role, TabDef[]> = {
     { name: 'pos', title: 'POS', icon: ShoppingCart },
     { name: 'orders', title: 'Pedidos', icon: ClipboardList },
     { name: 'reports', title: 'Reportes', icon: BarChart3 },
+    { name: 'more', title: 'Más', icon: Menu },
   ],
   CASHIER: [
     { name: 'pos', title: 'POS', icon: ShoppingCart },
     { name: 'orders', title: 'Pedidos', icon: ClipboardList },
     { name: 'cash', title: 'Caja', icon: Wallet },
+    { name: 'more', title: 'Más', icon: Menu },
   ],
   WAITER: [
     { name: 'menu', title: 'Menú', icon: UtensilsCrossed },
     { name: 'orders', title: 'Pedidos', icon: ClipboardList },
     { name: 'tables', title: 'Mesas', icon: Grid3X3 },
+    { name: 'more', title: 'Más', icon: Menu },
   ],
   KITCHEN: [
     { name: 'kitchen', title: 'Cocina', icon: ChefHat },
+    { name: 'more', title: 'Más', icon: Menu },
   ],
   DELIVERY: [
     { name: 'deliveries', title: 'Entregas', icon: Truck },
     { name: 'history', title: 'Historial', icon: History },
+    { name: 'more', title: 'Más', icon: Menu },
   ],
   CLIENT: [
     { name: 'menu', title: 'Menú', icon: UtensilsCrossed },
