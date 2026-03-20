@@ -27,7 +27,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
       <Card style={styles.userCard}>
         <View style={styles.avatar}>
-          <User size={28} color={Colors.primary} />
+          <User size={28} color={Colors.accent} />
         </View>
         <Text style={styles.userName}>{user?.name}</Text>
 
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
   },

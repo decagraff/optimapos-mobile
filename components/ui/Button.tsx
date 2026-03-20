@@ -3,7 +3,7 @@ import type { ViewStyle } from 'react-native';
 import { Colors, Radii, Spacing, FontSizes } from '@/constants/theme';
 import type { LucideIcon } from 'lucide-react-native';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
+type Variant = 'primary' | 'accent' | 'secondary' | 'outline' | 'danger' | 'ghost';
 
 interface ButtonProps {
   title: string;
@@ -18,9 +18,10 @@ interface ButtonProps {
 
 const variantStyles: Record<Variant, { bg: string; bgPressed: string; text: string; border?: string }> = {
   primary: { bg: Colors.primary, bgPressed: Colors.primaryDark, text: '#FFFFFF' },
+  accent: { bg: Colors.accent, bgPressed: Colors.accentDark, text: '#FFFFFF' },
   secondary: { bg: Colors.borderLight, bgPressed: Colors.border, text: Colors.text },
-  outline: { bg: 'transparent', bgPressed: Colors.borderLight, text: Colors.primary, border: Colors.primary },
-  danger: { bg: Colors.danger, bgPressed: '#DC2626', text: '#FFFFFF' },
+  outline: { bg: 'transparent', bgPressed: Colors.primaryLight, text: Colors.primary, border: Colors.border },
+  danger: { bg: Colors.danger, bgPressed: '#B91C1C', text: '#FFFFFF' },
   ghost: { bg: 'transparent', bgPressed: Colors.borderLight, text: Colors.textSecondary },
 };
 

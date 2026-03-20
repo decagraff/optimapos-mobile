@@ -50,12 +50,12 @@ export default function MoreScreen() {
       {/* User info */}
       <Card style={styles.userCard}>
         <View style={styles.avatar}>
-          <User size={24} color={Colors.primary} />
+          <User size={24} color={Colors.accent} />
         </View>
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{user?.name}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
-          <Badge label={user?.role || 'N/A'} color={Colors.primary} />
+          <Badge label={user?.role || 'N/A'} color={Colors.accent} />
         </View>
       </Card>
 
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
   },

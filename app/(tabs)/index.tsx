@@ -46,7 +46,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} colors={[Colors.accent]} />}
       >
         {/* Greeting */}
         <View style={styles.greeting}>
@@ -63,7 +63,7 @@ export default function DashboardScreen() {
         {/* Stats */}
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={Colors.accent} />
           </View>
         ) : (
           <View style={styles.statsGrid}>
@@ -73,7 +73,7 @@ export default function DashboardScreen() {
               <Text style={styles.statLabel}>Ventas hoy</Text>
             </Card>
             <Card style={styles.statCard}>
-              <ShoppingCart size={20} color={Colors.primary} />
+              <ShoppingCart size={20} color={Colors.accent} />
               <Text style={styles.statValue}>{summary?.totalOrders ?? 0}</Text>
               <Text style={styles.statLabel}>Pedidos</Text>
             </Card>

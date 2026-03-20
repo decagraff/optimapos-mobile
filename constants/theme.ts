@@ -1,30 +1,34 @@
 import { Platform, StyleSheet } from 'react-native';
 
 export const Colors = {
-  primary: '#F97316',
-  primaryDark: '#EA580C',
-  primaryLight: '#FFF7ED',
-  success: '#22C55E',
-  successLight: '#F0FDF4',
-  danger: '#EF4444',
+  // Slate + Amber palette — professional, serious
+  primary: '#1E293B',       // slate-800 — headers, buttons, tabs
+  primaryDark: '#0F172A',   // slate-900
+  primaryLight: '#F1F5F9',  // slate-100
+  accent: '#F59E0B',        // amber-500 — highlights, badges, CTAs
+  accentDark: '#D97706',    // amber-600
+  accentLight: '#FFFBEB',   // amber-50
+  success: '#059669',       // emerald-600
+  successLight: '#ECFDF5',
+  danger: '#DC2626',        // red-600
   dangerLight: '#FEF2F2',
-  warning: '#F59E0B',
+  warning: '#D97706',       // amber-600
   warningLight: '#FFFBEB',
-  info: '#3B82F6',
+  info: '#2563EB',          // blue-600
   infoLight: '#EFF6FF',
-  background: '#F9FAFB',
+  background: '#F8FAFC',    // slate-50
   card: '#FFFFFF',
-  text: '#111827',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  border: '#E5E7EB',
-  borderLight: '#F3F4F6',
-  tabActive: '#F97316',
-  tabInactive: '#6B7280',
+  text: '#0F172A',          // slate-900
+  textSecondary: '#475569', // slate-600
+  textTertiary: '#94A3B8',  // slate-400
+  border: '#E2E8F0',        // slate-200
+  borderLight: '#F1F5F9',   // slate-100
+  tabActive: '#1E293B',     // slate-800
+  tabInactive: '#94A3B8',   // slate-400
   inputBg: '#FFFFFF',
-  inputBorder: '#D1D5DB',
-  inputFocus: '#F97316',
-  overlay: 'rgba(0,0,0,0.5)',
+  inputBorder: '#CBD5E1',   // slate-300
+  inputFocus: '#1E293B',    // slate-800
+  overlay: 'rgba(15,23,42,0.5)',
 };
 
 export const Spacing = {
@@ -86,7 +90,7 @@ export const Shadows = StyleSheet.create({
 export const OrderStatusColors: Record<string, string> = {
   PENDING: Colors.warning,
   CONFIRMED: Colors.info,
-  PREPARING: Colors.primary,
+  PREPARING: Colors.accent,
   READY: Colors.success,
   DELIVERED: Colors.success,
   CANCELLED: Colors.danger,

@@ -59,7 +59,7 @@ export default function SetupScreen() {
         {/* Form */}
         <View style={styles.card}>
           <View style={styles.iconWrap}>
-            <Store size={32} color={Colors.primary} />
+            <Store size={32} color={Colors.accent} />
           </View>
           <Text style={styles.title}>Conectar restaurante</Text>
           <Text style={styles.subtitle}>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: Radii.md,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,

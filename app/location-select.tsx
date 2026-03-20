@@ -59,7 +59,7 @@ export default function LocationSelectScreen() {
             >
               <View style={styles.locRow}>
                 <View style={[styles.locIcon, item.isMain && styles.locIconMain]}>
-                  <Building2 size={20} color={item.isMain ? Colors.primary : Colors.textSecondary} />
+                  <Building2 size={20} color={item.isMain ? Colors.accent : Colors.textSecondary} />
                 </View>
                 <View style={styles.locInfo}>
                   <View style={styles.locNameRow}>
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   locCardSelected: {
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
   },
   locRow: {
     flexDirection: 'row',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   locIconMain: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.accentLight,
   },
   locInfo: {
     flex: 1,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   mainBadge: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.accentLight,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radii.pill,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   mainBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.primary,
+    color: Colors.accent,
   },
   locAddress: {
     flexDirection: 'row',
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.sm,
