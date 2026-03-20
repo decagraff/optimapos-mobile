@@ -1,6 +1,6 @@
 # OptimaPOS Mobile — Roadmap Completo
 
-> App móvil para personal de restaurante: meseros, cocina, delivery, managers y admins.
+> App móvil para todo el ecosistema del restaurante: personal interno + clientes.
 > Conecta al mismo backend OptimaPOS (API REST + Socket.io).
 > Distribución: APK directo (sin Play Store por ahora).
 
@@ -14,13 +14,6 @@
 - Notificaciones cuando el pedido está listo
 - Cambiar mesa, agregar notas
 
-### Delivery / Motorizado
-- Lista de pedidos asignados con prioridad
-- Navegación GPS (Google Maps / Waze)
-- Cambio de estados: Recogido → En camino → Entregado
-- Foto de entrega como comprobante
-- Historial de entregas del día
-
 ### Cocina
 - Ver pedidos entrantes en tiempo real (pantalla tipo Kitchen Display)
 - Marcar items/pedidos como "Preparando" y "Listo"
@@ -28,6 +21,13 @@
 - Sonido/vibración al llegar nuevo pedido
 - Vista optimizada para tablet o celular en horizontal
 - Timer por pedido (tiempo desde que entró)
+
+### Delivery / Motorizado
+- Lista de pedidos asignados con prioridad
+- Navegación GPS (Google Maps / Waze)
+- Cambio de estados: Recogido → En camino → Entregado
+- Foto de entrega como comprobante
+- Historial de entregas del día
 
 ### Dueño / Manager
 - Dashboard de ventas en tiempo real
@@ -45,16 +45,81 @@
 - Ver usuarios y su actividad por local
 - Notificaciones de todos los locales
 
+### Cliente (consumidor final)
+- Ver menú del restaurante (por local)
+- Hacer pedidos: delivery, para recoger, o desde la mesa
+- Repetir último pedido con 1 tap
+- Guardar productos favoritos
+- Direcciones guardadas (casa, trabajo, etc.)
+- Historial de pedidos completo
+- Tracking en tiempo real de su pedido
+- Pedir como invitado (sin registro, solo nombre + teléfono)
+- Registro completo para funciones extra (favoritos, historial, repetir)
+
+---
+
+## Sistema de QR
+
+### Tipos de QR
+
+#### QR de Mesa
+- Cada mesa del restaurante tiene un QR único
+- Contiene: `https://[slug].decatron.net/m/[mesaId]?l=[locationId]`
+- Al escanear:
+  - Si tiene la app → deep link, abre la app en ese local + mesa preseleccionada
+  - Si no tiene la app → abre el navegador con el menú web de esa mesa
+- El tipo de pedido se auto-selecciona como "En mesa"
+- La mesa se auto-asigna del QR
+
+#### QR del Restaurante / Local
+- Un QR general por local (para puerta, flyers, redes sociales)
+- Contiene: `https://[slug].decatron.net/menu?l=[locationId]`
+- Muestra el menú completo del local
+- Permite pedir delivery o para recoger
+- Banner para descargar la app
+
+### Generación de QR (Admin Web)
+- Configuración → Mesas → cada mesa tiene botón "Descargar QR"
+- Botón "Descargar todos los QR" → genera PDF con todos
+- QR branded: logo del restaurante al centro
+- PDF imprimible con formato por mesa:
+  - Logo + nombre del restaurante
+  - QR grande
+  - "Mesa X"
+  - "Escanea para ver el menú"
+  - WiFi del local (opcional)
+  - Dirección del local
+- QR del restaurante desde Configuración → Local → "QR del menú"
+
+### Menú Web (sin app — acceso por QR)
+- Página web responsive que funciona sin instalar nada
+- Ruta: `https://[slug].decatron.net/m/[mesaId]` o `/menu`
+- Muestra la carta del local correcto (por locationId)
+- Permite agregar items al carrito
+- Checkout:
+  - En mesa: mesa auto-asignada del QR
+  - Delivery: pide dirección
+  - Para recoger: solo confirma
+- Pedir como invitado: solo nombre + teléfono (sin password)
+- Registro opcional para guardar historial y favoritos
+- Banner fijo: "Descarga la app para pedir más rápido"
+- El pedido llega al POS igual que cualquier otro pedido
+- Estado del pedido visible en la misma web después de confirmar
+
 ---
 
 ## Fases de Desarrollo
 
 ### Fase 1 — Base + Autenticación
 - [ ] Splash screen con logo OptimaPOS
-- [ ] Pantalla de configuración inicial (URL del servidor)
-- [ ] Login con email/password
+- [ ] Pantalla de configuración inicial (código del restaurante o QR)
 - [ ] Validación de servidor (`/api/health`)
+- [ ] Login con email/password (staff)
+- [ ] Registro de cliente (nombre + teléfono + password)
 - [ ] Persistencia de token (SecureStore)
+- [ ] Selección de local (si el tenant tiene varios)
+  - Si solo 1 local → skip automático
+  - Opción "Recordar mi selección"
 - [ ] Navegación por tabs según rol del usuario
 - [ ] Conexión Socket.io para eventos real-time
 - [ ] Componentes base del design system
@@ -93,6 +158,40 @@
 - [ ] Notificación push de nuevo pedido asignado
 - [ ] Badge de pedidos pendientes en tab
 
+### Fase 3.5 — Módulo Cliente
+- [ ] Home del cliente:
+  - Banners de promos activas
+  - Botón "Repetir último pedido" (1 tap, muestra resumen + precio)
+  - Sección "Tus favoritos" (productos con corazón)
+  - Categorías con imagen
+- [ ] Catálogo: mismos componentes que mesero pero sin opciones de staff
+- [ ] Carrito + Checkout:
+  - Tipo de pedido: Delivery / Para recoger / En mesa
+  - Delivery: selector de dirección guardada o nueva + zona con recargo
+  - Para recoger: solo confirma local y hora estimada
+  - En mesa: número de mesa o escaneo de QR
+  - Campo código de descuento
+  - Método de pago: Efectivo, Yape, Transferencia
+  - Confirmar pedido
+- [ ] Tracking del pedido en tiempo real (Socket.io):
+  - Timeline visual: Confirmado → Preparando → Listo → En camino → Entregado
+  - Tiempo estimado
+- [ ] Mis pedidos (historial):
+  - Lista de pedidos anteriores
+  - Botón "Repetir" en cada pedido
+  - Detalle expandible con items
+- [ ] Favoritos:
+  - Corazón en cada producto para agregar/quitar
+  - Sección dedicada con acceso rápido
+- [ ] Perfil del cliente:
+  - Datos personales (nombre, teléfono)
+  - Direcciones guardadas (CRUD: casa, trabajo, otras)
+  - Cambiar contraseña
+- [ ] Pedir como invitado (sin cuenta):
+  - Solo pide nombre + teléfono en checkout
+  - No tiene historial, favoritos ni repetir pedido
+  - Banner: "Crea una cuenta para guardar tus pedidos"
+
 ### Fase 4 — Módulo Manager / Dashboard
 - [ ] Card de ventas del día (total, cantidad, ticket promedio)
 - [ ] Gráfico de ventas por hora (barras)
@@ -120,6 +219,9 @@
   - Nuevo pedido en cocina (para cocina)
   - Pedido listo (para mesero)
   - Nuevo pedido delivery asignado (para motorizado)
+  - Estado del pedido actualizado (para cliente)
+  - "Tu pedido está listo para recoger" (para cliente)
+  - "El motorizado está en camino" (para cliente)
   - Stock agotado (para manager/admin)
   - Caja cerrada (para manager/admin)
   - Pedido cancelado (para todos)
@@ -127,15 +229,38 @@
 - [ ] Pantalla de historial de notificaciones
 - [ ] Badge en ícono de la app
 
+### Fase 5.5 — Sistema QR + Menú Web
+- [ ] **Backend:**
+  - Endpoint para generar QR por mesa (devuelve PNG/SVG)
+  - Endpoint para generar PDF con todos los QR de un local
+  - Endpoint para pedido como invitado (sin auth, solo nombre+teléfono)
+  - QR branded con logo del tenant
+- [ ] **Admin Web (frontend OptimaPOS):**
+  - Botón "Descargar QR" en cada mesa (Configuración → Mesas)
+  - Botón "Descargar todos los QR" → PDF imprimible
+  - QR del menú general del local (Configuración → Local)
+  - Preview del QR antes de descargar
+- [ ] **Menú Web público:**
+  - Ruta `/m/:mesaId` — menú con mesa preseleccionada
+  - Ruta `/menu` — menú general (delivery/pickup)
+  - Catálogo completo del local (categorías, productos, variantes, addons)
+  - Carrito + checkout (invitado o registrado)
+  - Vista de estado del pedido post-compra
+  - Responsive: optimizado para celular
+  - Banner "Descarga la app"
+- [ ] **App móvil:**
+  - Escáner QR integrado (cámara)
+  - Deep links: la app intercepta URLs del restaurante
+  - Auto-selección de mesa y local desde el QR
+
 ### Fase 6 — Offline Básico
 - [ ] Cache del catálogo en SQLite local (expo-sqlite)
-- [ ] Tomar pedidos sin conexión (cola local)
+- [ ] Tomar pedidos sin conexión (cola local) — solo staff
 - [ ] Sync automático al recuperar conexión
 - [ ] Indicador visual de estado de conexión
 - [ ] Cache de datos del usuario para login offline
 
 ### Fase 7 — Extras Pro
-- [ ] Escáner QR para identificar mesa
 - [ ] Firma digital del cliente en entrega
 - [ ] Modo oscuro completo
 - [ ] Multi-idioma (español / inglés)
@@ -143,17 +268,74 @@
 - [ ] Login biométrico (huella / Face ID)
 - [ ] Haptic feedback en acciones importantes
 - [ ] Animaciones de transición pulidas
+- [ ] Programa de fidelidad: cada X pedidos → descuento automático
+- [ ] Valoración de pedido (estrellas + comentario) post-entrega
 
 ---
 
-## Fuera de Alcance (se queda en Desktop / Web)
+## Flujo del Cliente — Detalle
+
+### Primera vez (sin app)
+```
+Escanea QR de mesa 5
+  → Abre navegador web
+  → Ve menú del local (Sede Principal)
+  → Agrega items al carrito
+  → Checkout: "Pedir como invitado"
+  → Ingresa: nombre + teléfono
+  → Tipo: "En mesa" (auto del QR), Mesa: 5 (auto)
+  → Confirma pedido
+  → Ve estado en tiempo real en la misma web
+  → Banner: "Descarga la app para pedir más rápido"
+```
+
+### Cliente con app (frecuente)
+```
+Abre la app
+  → Ya logueado, local recordado
+  → Home: "Repetir último pedido: 2x Lomo + 1 Chicha — S/ 45"
+  → Tap "Pedir" → Checkout pre-llenado
+  → Confirma → Listo (2 taps total)
+```
+
+### Cliente con app + QR de mesa
+```
+Escanea QR de mesa 5
+  → Deep link abre la app
+  → Local: Sede Principal (del QR)
+  → Mesa: 5 (del QR)
+  → Ve el menú, agrega items
+  → Checkout: tipo "En mesa", mesa 5 (auto)
+  → Confirma → Pedido llega al POS
+  → Push notification: "Tu pedido está siendo preparado"
+  → Push notification: "Tu pedido está listo"
+```
+
+### Selección de local (multi-local)
+```
+Abre la app (o escanea QR del restaurante general)
+  → "¿Desde dónde quieres pedir?"
+  → Lista de locales:
+    - Sede Principal — Av. La Marina 2450 — Abierto
+    - Sucursal San Miguel — Jr. Los Olivos 180 — Abierto
+    - Sucursal Callao — Av. Sáenz Peña 320 — Cerrado
+  → Selecciona local
+  → ☑ Recordar mi selección
+  → Ve el menú de ESE local (catálogo independiente)
+
+  Si solo hay 1 local → salta directo al menú
+```
+
+---
+
+## Fuera de Alcance (se queda en Desktop / Web Admin)
 
 - Caja / Arqueo (requiere impresora)
 - Impresión de tickets
 - CRUD completo de productos / categorías / addons / combos
 - Configuración de impresoras
 - Panel Super Admin
-- Gestión de usuarios
+- Gestión de usuarios (CRUD)
 - Suscripción / pagos PayPal
 - Editor de tickets
 
@@ -221,6 +403,7 @@ Sistema de 4px: `4, 8, 12, 16, 20, 24, 32, 40, 48`
 - Fondo blanco, borde superior sutil
 
 Tabs por rol:
+- **Cliente:** Inicio | Carta | Mis Pedidos | Perfil
 - **Mesero:** Carta | Mis Pedidos | Mesas | Perfil
 - **Cocina:** Pedidos | Historial | Perfil
 - **Delivery:** Pendientes | En Curso | Historial | Perfil
@@ -233,6 +416,7 @@ Tabs por rol:
 - Título centrado, bold
 - Sin borde inferior, solo sombra sutil
 - Botón back: flecha izquierda
+- Cliente: nombre del local + selector de local en header
 
 ### Componentes Reutilizables
 
@@ -248,15 +432,24 @@ components/
 │   ├── EmptyState.tsx      — ilustración + mensaje
 │   ├── LoadingSkeleton.tsx — placeholder animado
 │   ├── StatusChip.tsx      — estados de pedido con colores
-│   └── Avatar.tsx          — iniciales o foto de usuario
+│   ├── Avatar.tsx          — iniciales o foto de usuario
+│   └── QRScanner.tsx       — escáner de QR con cámara
 ├── product/
 │   ├── ProductCard.tsx     — imagen + nombre + precio (grid)
 │   ├── ProductDetail.tsx   — variantes + addons + notas
-│   └── CategoryChips.tsx   — scroll horizontal de categorías
+│   ├── CategoryChips.tsx   — scroll horizontal de categorías
+│   └── FavoriteButton.tsx  — corazón toggle (cliente)
 ├── order/
 │   ├── OrderCard.tsx       — resumen compacto de pedido
 │   ├── OrderDetail.tsx     — items + totales + estado
-│   └── CartSheet.tsx       — bottom sheet del carrito
+│   ├── OrderTimeline.tsx   — timeline visual de estados (cliente)
+│   ├── CartSheet.tsx       — bottom sheet del carrito
+│   └── RepeatOrderCard.tsx — card "Repetir último pedido" (cliente)
+├── client/
+│   ├── HomeBanner.tsx      — banners de promos (carousel)
+│   ├── AddressPicker.tsx   — selector de dirección guardada + nueva
+│   ├── LocationSelector.tsx— selección de local (multi-local)
+│   └── GuestCheckout.tsx   — formulario invitado (nombre + teléfono)
 ├── kitchen/
 │   ├── KitchenCard.tsx     — pedido con items, timer, botones estado
 │   └── KitchenFilters.tsx  — chips de filtro por categoría
@@ -302,6 +495,14 @@ components/
 
 ### Diseño por Rol
 
+**Cliente** — Estilo app de delivery (tipo PedidosYa/Rappi)
+- Home con promos, repetir pedido, favoritos
+- Catálogo visual con imágenes grandes
+- Carrito como bottom sheet
+- Checkout limpio con pasos claros
+- Tracking del pedido con timeline animada
+- Colores cálidos, experiencia amigable
+
 **Mesero** — Estilo e-commerce
 - Grid 2 columnas de productos con imagen
 - Categorías como chips scrollables arriba
@@ -345,11 +546,12 @@ components/
 - **Real-time:** socket.io-client
 - **Storage seguro:** expo-secure-store (tokens)
 - **SQLite offline:** expo-sqlite
-- **Cámara:** expo-camera (foto de entrega)
+- **Cámara:** expo-camera (foto de entrega + escáner QR)
 - **Mapas:** react-native-maps o deep link a Google Maps
 - **Push:** expo-notifications + Firebase FCM
 - **Iconos:** lucide-react-native
 - **Gráficos:** react-native-chart-kit o victory-native
+- **QR Scanner:** expo-camera (barcode scanning integrado)
 
 ---
 
@@ -360,3 +562,39 @@ components/
   - O local: `npx expo run:android` → genera APK
 - **iOS:** TestFlight o ad-hoc (requiere Apple Developer $99/año — futuro)
 - **Updates OTA:** expo-updates (Fase 7) para parches sin reinstalar
+
+---
+
+## Cambios Requeridos en Backend / Web
+
+Estos cambios se hacen en el repo principal `optimapos` (backend + frontend web):
+
+### Backend
+- [ ] Endpoint: pedido como invitado (`POST /api/orders/guest`) — sin auth, solo nombre+teléfono
+- [ ] Endpoint: generar QR por mesa (`GET /api/tables/:id/qr`) — devuelve PNG/SVG
+- [ ] Endpoint: generar PDF con todos los QR de un local (`GET /api/locations/:id/qr-pdf`)
+- [ ] Modelo: `GuestOrder` o campo `guestName`/`guestPhone` en Order (ya existe parcialmente)
+- [ ] Modelo: `UserAddress` — direcciones guardadas del cliente
+- [ ] Modelo: `UserFavorite` — productos favoritos del cliente
+- [ ] Endpoint: CRUD direcciones del cliente (`/api/user/addresses`)
+- [ ] Endpoint: CRUD favoritos del cliente (`/api/user/favorites`)
+- [ ] Endpoint: historial de pedidos del cliente (`/api/user/orders`)
+- [ ] Endpoint: repetir pedido (`POST /api/orders/repeat/:orderId`)
+- [ ] Endpoint: registro de device token para push (`POST /api/user/device-token`)
+- [ ] Firebase Admin SDK para enviar push notifications
+- [ ] Deep link universal: configurar `.well-known/assetlinks.json` (Android)
+
+### Frontend Web (Admin)
+- [ ] Mesas → botón "Descargar QR" por mesa
+- [ ] Mesas → botón "Descargar todos los QR" → PDF
+- [ ] Local → "QR del menú" general
+- [ ] Preview del QR antes de descargar
+
+### Frontend Web (Menú público)
+- [ ] Ruta `/m/:mesaId` — menú con mesa preseleccionada
+- [ ] Ruta `/menu` — menú general del local
+- [ ] Catálogo completo responsive (categorías, productos, variantes, addons)
+- [ ] Carrito + checkout (invitado o registrado)
+- [ ] Vista de estado del pedido post-compra (tracking)
+- [ ] Banner "Descarga la app para pedir más rápido"
+- [ ] PWA-ready: se puede agregar a home screen
