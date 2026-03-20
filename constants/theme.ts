@@ -92,6 +92,8 @@ export const OrderStatusColors: Record<string, string> = {
   CONFIRMED: Colors.info,
   PREPARING: Colors.accent,
   READY: Colors.success,
+  READY_PICKUP: Colors.success,
+  ON_THE_WAY: '#8B5CF6',
   DELIVERED: Colors.success,
   CANCELLED: Colors.danger,
 };

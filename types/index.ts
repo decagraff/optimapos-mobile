@@ -125,7 +125,7 @@ export interface CartItem {
 // ─── Orders ───────────────────────────────────────────────────────────
 
 export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY_PICKUP' | 'ON_THE_WAY' | 'DELIVERED' | 'CANCELLED';
 
 export interface OrderItem {
   id: number;
@@ -153,6 +153,10 @@ export interface Order {
   table?: { id: number; name: string; number: number } | null;
   guestName?: string;
   guestPhone?: string;
+  guestAddress?: string;
+  user?: { name: string; phone: string; address?: string | null } | null;
+  deliveryUser?: { id: number; name: string; phone: string } | null;
+  deliveryUserId?: number | null;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;

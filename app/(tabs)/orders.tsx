@@ -16,7 +16,7 @@ const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
   CONFIRMED: 'Confirmado',
   PREPARING: 'Preparando',
-  READY: 'Listo',
+  READY_PICKUP: 'Listo',
   ON_THE_WAY: 'En camino',
   DELIVERED: 'Entregado',
   CANCELLED: 'Cancelado',
@@ -24,6 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const TYPE_LABELS: Record<string, string> = {
   DINE_IN: 'En mesa',
+  PICKUP: 'Para llevar',
   TAKEAWAY: 'Para llevar',
   DELIVERY: 'Delivery',
 };
@@ -40,8 +41,8 @@ function timeAgo(dateStr: string): string {
 const NEXT_STATUS: Record<string, { status: string; label: string; color: string } | null> = {
   PENDING:   { status: 'CONFIRMED',  label: 'Confirmar',    color: Colors.info },
   CONFIRMED: { status: 'PREPARING',  label: 'Preparando',   color: Colors.accent },
-  PREPARING: { status: 'READY',      label: 'Listo',        color: Colors.success },
-  READY:     { status: 'DELIVERED',   label: 'Entregado',    color: Colors.success },
+  PREPARING: { status: 'READY_PICKUP', label: 'Listo',        color: Colors.success },
+  READY_PICKUP: { status: 'DELIVERED', label: 'Entregado',    color: Colors.success },
 };
 
 function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; onStatusChange: (id: number, status: string) => void; canChangeStatus: boolean }) {

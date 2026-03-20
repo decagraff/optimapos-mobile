@@ -134,6 +134,24 @@ class ApiClient {
   async updateKitchenStatus(orderId: number, status: string): Promise<any> {
     return this.patch(`/api/orders/kitchen/${orderId}/status`, { status });
   }
+
+  // Delivery
+  async getDeliveryOrders(): Promise<Order[]> {
+    return this.get('/api/orders/delivery/active');
+  }
+
+  async updateDeliveryStatus(orderId: number, status: string): Promise<Order> {
+    return this.patch(`/api/orders/delivery/${orderId}/status`, { status });
+  }
+
+  async assignDeliveryUser(orderId: number, deliveryUserId: number | null): Promise<Order> {
+    return this.patch(`/api/orders/delivery/${orderId}/assign`, { deliveryUserId });
+  }
+
+  async getDeliveryUsers(locationId?: number): Promise<{ id: number; name: string; phone: string }[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/orders/delivery/users${q}`);
+  }
 }
 
 export const api = new ApiClient();

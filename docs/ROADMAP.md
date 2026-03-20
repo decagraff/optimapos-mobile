@@ -139,24 +139,24 @@
 - [x] Mesas: grid visual con colores por estado + resumen
 - [ ] Skeleton loaders durante carga (pendiente — usa ActivityIndicator)
 
-### Fase 2.5 — Módulo Cocina
-- [ ] Lista de pedidos entrantes en tiempo real (Socket.io)
-- [ ] Card de pedido: items con cantidad, notas, variantes, addons
-- [ ] Botón "Preparando" y "Listo" por pedido
+### Fase 2.5 — Módulo Cocina ✅
+- [x] Lista de pedidos entrantes en tiempo real (Socket.io)
+- [x] Card de pedido: items con cantidad, notas, variantes, addons
+- [x] Botón "Preparando" y "Listo" por pedido
 - [ ] Filtro por categoría (todo / bebidas / platos / postres)
-- [ ] Timer visible por pedido (minutos desde que entró)
-- [ ] Sonido + vibración al llegar nuevo pedido
-- [ ] Auto-scroll al nuevo pedido
+- [x] Timer visible por pedido (minutos desde que entró)
+- [x] Sonido + vibración al llegar nuevo pedido
+- [x] Auto-scroll al nuevo pedido
 - [ ] Vista adaptable: vertical (celular) y horizontal (tablet)
-- [ ] Indicador visual de pedidos urgentes (> X minutos)
+- [x] Indicador visual de pedidos urgentes (> X minutos)
 
-### Fase 3 — Módulo Delivery
-- [ ] Lista de pedidos asignados (cards grandes)
-- [ ] Detalle de pedido: items + dirección + teléfono cliente
-- [ ] Botón "Abrir en Maps / Waze" con dirección
-- [ ] Cambio de estado con botón principal grande
+### Fase 3 — Módulo Delivery ✅
+- [x] Lista de pedidos asignados (cards grandes)
+- [x] Detalle de pedido: items + dirección + teléfono cliente
+- [x] Botón "Abrir en Maps / Waze" con dirección
+- [x] Cambio de estado con botón principal grande
 - [ ] Foto de entrega (cámara del dispositivo)
-- [ ] Historial de entregas del día
+- [x] Historial de entregas del día
 - [ ] Notificación push de nuevo pedido asignado
 - [ ] Badge de pedidos pendientes en tab
 
