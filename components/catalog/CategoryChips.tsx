@@ -13,6 +13,7 @@ export default function CategoryChips({ categories, selectedId, onSelect }: Prop
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={styles.container}
     >
       <Pressable
@@ -37,10 +38,16 @@ export default function CategoryChips({ categories, selectedId, onSelect }: Prop
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    maxHeight: 52,
+    minHeight: 52,
+  },
   container: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.sm,
+    alignItems: 'center',
+    height: 52,
   },
   chip: {
     paddingHorizontal: Spacing.lg,
@@ -49,6 +56,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.border,
+    height: 36,
+    justifyContent: 'center',
   },
   chipActive: {
     backgroundColor: Colors.primary,
