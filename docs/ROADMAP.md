@@ -1,6 +1,6 @@
 # OptimaPOS Mobile — Roadmap Completo
 
-> App móvil para personal de restaurante: meseros, delivery y managers.
+> App móvil para personal de restaurante: meseros, cocina, delivery, managers y admins.
 > Conecta al mismo backend OptimaPOS (API REST + Socket.io).
 > Distribución: APK directo (sin Play Store por ahora).
 
@@ -21,12 +21,29 @@
 - Foto de entrega como comprobante
 - Historial de entregas del día
 
+### Cocina
+- Ver pedidos entrantes en tiempo real (pantalla tipo Kitchen Display)
+- Marcar items/pedidos como "Preparando" y "Listo"
+- Filtro por categoría (bebidas, platos, postres)
+- Sonido/vibración al llegar nuevo pedido
+- Vista optimizada para tablet o celular en horizontal
+- Timer por pedido (tiempo desde que entró)
+
 ### Dueño / Manager
 - Dashboard de ventas en tiempo real
 - Reportes básicos (día/semana/mes, productos top)
 - Notificaciones de eventos importantes
 - Estado de mesas en vivo
 - Activar/desactivar productos rápidamente
+
+### Admin (multi-local)
+- Todo lo del Manager
+- Selector de local (cambiar entre locales del tenant)
+- Dashboard comparativo entre locales
+- Reportes consolidados de todos los locales
+- Gestión rápida: activar/desactivar productos por local
+- Ver usuarios y su actividad por local
+- Notificaciones de todos los locales
 
 ---
 
@@ -55,6 +72,17 @@
 - [ ] Pull-to-refresh en listas
 - [ ] Skeleton loaders durante carga
 
+### Fase 2.5 — Módulo Cocina
+- [ ] Lista de pedidos entrantes en tiempo real (Socket.io)
+- [ ] Card de pedido: items con cantidad, notas, variantes, addons
+- [ ] Botón "Preparando" y "Listo" por pedido
+- [ ] Filtro por categoría (todo / bebidas / platos / postres)
+- [ ] Timer visible por pedido (minutos desde que entró)
+- [ ] Sonido + vibración al llegar nuevo pedido
+- [ ] Auto-scroll al nuevo pedido
+- [ ] Vista adaptable: vertical (celular) y horizontal (tablet)
+- [ ] Indicador visual de pedidos urgentes (> X minutos)
+
 ### Fase 3 — Módulo Delivery
 - [ ] Lista de pedidos asignados (cards grandes)
 - [ ] Detalle de pedido: items + dirección + teléfono cliente
@@ -74,15 +102,28 @@
 - [ ] Toggle rápido de productos (activar/desactivar)
 - [ ] Pull-to-refresh + auto-refresh cada 30s
 
+### Fase 4.5 — Módulo Admin (multi-local)
+- [ ] Selector de local en header (dropdown o modal)
+- [ ] Cambio de contexto: al seleccionar local, todo se filtra por ese local
+- [ ] Dashboard comparativo: ventas de todos los locales en cards
+- [ ] Reportes consolidados (total de todos los locales)
+- [ ] Reportes por local individual
+- [ ] Gestión rápida de productos por local (activar/desactivar)
+- [ ] Lista de usuarios con último acceso por local
+- [ ] Notificaciones agregadas de todos los locales
+- [ ] Vista "Todos los locales" como opción del selector
+
 ### Fase 5 — Push Notifications (FCM)
 - [ ] Integración Firebase Cloud Messaging
 - [ ] Registro de device token por usuario en backend
 - [ ] Backend envía push en eventos:
+  - Nuevo pedido en cocina (para cocina)
   - Pedido listo (para mesero)
   - Nuevo pedido delivery asignado (para motorizado)
-  - Stock agotado (para manager)
-  - Caja cerrada (para manager)
+  - Stock agotado (para manager/admin)
+  - Caja cerrada (para manager/admin)
   - Pedido cancelado (para todos)
+  - Resumen diario de ventas (para admin, al cierre)
 - [ ] Pantalla de historial de notificaciones
 - [ ] Badge en ícono de la app
 
@@ -175,10 +216,16 @@ Sistema de 4px: `4, 8, 12, 16, 20, 24, 32, 40, 48`
 
 ### Bottom Tabs
 
-- 3–4 tabs según rol
 - Ícono + label siempre visible
 - Tab activo: naranja (`#F97316`), inactivo: gris (`#6B7280`)
 - Fondo blanco, borde superior sutil
+
+Tabs por rol:
+- **Mesero:** Carta | Mis Pedidos | Mesas | Perfil
+- **Cocina:** Pedidos | Historial | Perfil
+- **Delivery:** Pendientes | En Curso | Historial | Perfil
+- **Manager:** Dashboard | Pedidos | Mesas | Productos | Perfil
+- **Admin:** Dashboard | Pedidos | Locales | Productos | Perfil
 
 ### Headers / Navigation
 
@@ -210,9 +257,15 @@ components/
 │   ├── OrderCard.tsx       — resumen compacto de pedido
 │   ├── OrderDetail.tsx     — items + totales + estado
 │   └── CartSheet.tsx       — bottom sheet del carrito
+├── kitchen/
+│   ├── KitchenCard.tsx     — pedido con items, timer, botones estado
+│   └── KitchenFilters.tsx  — chips de filtro por categoría
 ├── delivery/
 │   ├── DeliveryCard.tsx    — pedido con dirección destacada
 │   └── DeliveryMap.tsx     — mapa embebido pequeño
+├── admin/
+│   ├── LocationPicker.tsx  — selector de local (dropdown/modal)
+│   └── CompareCards.tsx    — cards comparativas entre locales
 └── dashboard/
     ├── StatCard.tsx         — número grande + label + icono
     ├── SalesChart.tsx       — gráfico de barras por hora
@@ -255,6 +308,14 @@ components/
 - Carrito como bottom sheet desde abajo
 - Botón flotante "Enviar Pedido" naranja, grande, esquina inferior
 
+**Cocina** — Estilo Kitchen Display System (KDS)
+- Cards anchas, una por pedido, apiladas verticalmente
+- Items en lista con cantidad destacada en negrita
+- Timer en esquina superior (verde < 5min, amarillo 5–10min, rojo > 10min)
+- Botones grandes "Preparando" (azul) y "Listo" (verde)
+- Fondo oscuro opcional para mejor visibilidad en cocina
+- Vibración + sonido al llegar pedido nuevo
+
 **Delivery** — Estilo lista de tareas
 - Cards grandes con dirección en negrita
 - Botón de acción principal ocupa todo el ancho
@@ -266,6 +327,12 @@ components/
 - Gráfico de barras debajo
 - Lista compacta de pedidos activos
 - Grid de mesas con indicador de color
+
+**Admin** — Estilo manager + multi-local
+- Selector de local prominente en header (nombre del local actual)
+- Dashboard con cards por local cuando está en "Todos"
+- Mismo layout que Manager al seleccionar un local específico
+- Badge con alertas pendientes por local
 
 ---
 
