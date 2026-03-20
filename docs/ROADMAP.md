@@ -126,17 +126,18 @@
 - [x] Manejo de errores global (ErrorBoundary)
 - [x] Dashboard por rol (Admin, Waiter, Kitchen, Cashier, Delivery, Client)
 
-### Fase 2 — Módulo Mesero
-- [ ] Catálogo: categorías como chips horizontales scrollables
-- [ ] Grid de productos (2 columnas con imagen)
-- [ ] Detalle de producto: variantes + addons + notas
-- [ ] Carrito como bottom sheet deslizable
-- [ ] Selección de mesa (grid visual o lista)
-- [ ] Selección de tipo: Mesa / Para llevar
-- [ ] Envío de pedido al backend
-- [ ] Lista "Mis pedidos" con estado en vivo (Socket.io)
-- [ ] Pull-to-refresh en listas
-- [ ] Skeleton loaders durante carga
+### Fase 2 — Módulo Mesero ✅
+- [x] Catálogo: categorías como chips horizontales scrollables
+- [x] Grid de productos (2 columnas con imagen, expo-image)
+- [x] Detalle de producto: variantes + addons + notas + cantidad
+- [x] Carrito como bottom sheet deslizable (@gorhom/bottom-sheet)
+- [x] Selección de mesa (lista con estado libre/ocupada)
+- [x] Selección de tipo: Mesa / Para llevar
+- [x] Envío de pedido al backend (POST /api/orders)
+- [x] Lista "Mis pedidos" con estado en vivo (Socket.io)
+- [x] Pull-to-refresh en listas
+- [x] Mesas: grid visual con colores por estado + resumen
+- [ ] Skeleton loaders durante carga (pendiente — usa ActivityIndicator)
 
 ### Fase 2.5 — Módulo Cocina
 - [ ] Lista de pedidos entrantes en tiempo real (Socket.io)
