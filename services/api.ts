@@ -121,6 +121,10 @@ class ApiClient {
   async createOrder(data: any): Promise<{ order: Order; whatsappLink?: string }> {
     return this.post('/api/orders', data);
   }
+
+  async updateOrderStatus(orderId: number, status: string): Promise<Order> {
+    return this.patch(`/api/orders/${orderId}/status`, { status });
+  }
 }
 
 export const api = new ApiClient();

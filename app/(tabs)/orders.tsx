@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
-import { ClipboardList, Clock, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native';
+import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
+import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -34,10 +36,27 @@ function timeAgo(dateStr: string): string {
   return `${hrs}h ${mins % 60}m`;
 }
 
-function OrderCard({ order }: { order: Order }) {
+// Status flow: what's the next status for each current status
+const NEXT_STATUS: Record<string, { status: string; label: string; color: string } | null> = {
+  PENDING:   { status: 'CONFIRMED',  label: 'Confirmar',    color: Colors.info },
+  CONFIRMED: { status: 'PREPARING',  label: 'Preparando',   color: Colors.accent },
+  PREPARING: { status: 'READY',      label: 'Listo',        color: Colors.success },
+  READY:     { status: 'DELIVERED',   label: 'Entregado',    color: Colors.success },
+};
+
+function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; onStatusChange: (id: number, status: string) => void; canChangeStatus: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const isActive = !['DELIVERED', 'CANCELLED'].includes(order.status);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
+  const nextAction = isActive ? NEXT_STATUS[order.status] : null;
+
+  const handleStatusChange = async () => {
+    if (!nextAction) return;
+    setUpdating(true);
+    await onStatusChange(order.id, nextAction.status);
+    setUpdating(false);
+  };
 
   return (
     <Card style={[styles.orderCard, isActive && styles.orderCardActive]}>
@@ -84,15 +103,31 @@ function OrderCard({ order }: { order: Order }) {
           </View>
         )}
       </Pressable>
+
+      {/* Status action button — only for staff roles */}
+      {canChangeStatus && nextAction && (
+        <Pressable
+          style={[styles.statusBtn, { backgroundColor: nextAction.color }]}
+          onPress={handleStatusChange}
+          disabled={updating}
+        >
+          <Text style={styles.statusBtnText}>{updating ? 'Actualizando...' : nextAction.label}</Text>
+          {!updating && <ArrowRight size={16} color="#FFFFFF" />}
+        </Pressable>
+      )}
     </Card>
   );
 }
 
+const STAFF_ROLES = ['ADMIN', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN'];
+
 export default function OrdersScreen() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { socket } = useSocket();
+  const canChangeStatus = STAFF_ROLES.includes(user?.role || '');
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -119,6 +154,13 @@ export default function OrdersScreen() {
     setRefreshing(true);
     await fetchOrders();
     setRefreshing(false);
+  };
+
+  const handleStatusChange = async (orderId: number, status: string) => {
+    try {
+      await api.updateOrderStatus(orderId, status);
+      await fetchOrders();
+    } catch {}
   };
 
   if (loading) {
@@ -155,7 +197,7 @@ export default function OrdersScreen() {
           <View>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.data.map(order => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} canChangeStatus={canChangeStatus} />
             ))}
           </View>
         )}
@@ -200,4 +242,14 @@ const styles = StyleSheet.create({
   itemAddons: { fontSize: FontSizes.xs, color: Colors.textTertiary },
   itemNotes: { fontSize: FontSizes.xs, color: Colors.accent, fontStyle: 'italic' },
   itemPrice: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
+  statusBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radii.sm,
+  },
+  statusBtnText: { fontSize: FontSizes.md, fontWeight: '700', color: '#FFFFFF' },
 });

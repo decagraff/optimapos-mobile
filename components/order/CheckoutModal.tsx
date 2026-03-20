@@ -40,19 +40,27 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
     setError('');
 
     try {
-      const orderData = {
-        type: cart.orderType,
-        locationId: selectedLocationId,
-        tableId: cart.orderType === 'DINE_IN' ? cart.tableId : null,
-        notes: cart.notes || null,
-        items: cart.items.map(item => ({
-          productId: item.productId,
-          variantId: item.variantId || null,
-          quantity: item.quantity,
-          notes: item.notes || null,
-          addons: item.addons.map(a => ({ addonId: a.addonId, quantity: a.quantity })),
-        })),
+      // Backend uses PICKUP not TAKEAWAY
+      const type = cart.orderType === 'TAKEAWAY' ? 'PICKUP' : cart.orderType;
+
+      const orderData: Record<string, any> = {
+        type,
+        items: cart.items.map(item => {
+          const orderItem: Record<string, any> = {
+            productId: item.productId,
+            quantity: item.quantity,
+          };
+          if (item.variantId) orderItem.variantId = item.variantId;
+          if (item.notes) orderItem.notes = item.notes;
+          if (item.addons.length > 0) {
+            orderItem.addons = item.addons.map(a => ({ addonId: a.addonId, quantity: a.quantity }));
+          }
+          return orderItem;
+        }),
       };
+      if (selectedLocationId) orderData.locationId = selectedLocationId;
+      if (type === 'DINE_IN' && cart.tableId) orderData.tableId = cart.tableId;
+      if (cart.notes) orderData.notes = cart.notes;
 
       await api.createOrder(orderData);
       cart.clear();

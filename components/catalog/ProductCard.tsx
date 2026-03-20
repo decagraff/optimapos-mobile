@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Colors, Spacing, FontSizes, Radii, Shadows } from '@/constants/theme';
 import { ShoppingCart, AlertCircle } from 'lucide-react-native';
@@ -11,8 +11,6 @@ interface Props {
 }
 
 export default function ProductCard({ product, onPress, baseUrl }: Props) {
-  const { width } = useWindowDimensions();
-  const cardWidth = (width - Spacing.lg * 2 - Spacing.md) / 2; // 2 columns with gap
   const price = Number(product.price) || 0;
   const promo = product.promoPrice != null ? Number(product.promoPrice) : null;
   const outOfStock = product.stockEnabled && (product.stockCurrent ?? 0) <= 0;
@@ -23,7 +21,7 @@ export default function ProductCard({ product, onPress, baseUrl }: Props) {
 
   return (
     <Pressable
-      style={[styles.card, { width: cardWidth }, outOfStock && styles.cardDisabled]}
+      style={[styles.card, outOfStock && styles.cardDisabled]}
       onPress={() => !outOfStock && onPress(product)}
     >
       {imageUri ? (

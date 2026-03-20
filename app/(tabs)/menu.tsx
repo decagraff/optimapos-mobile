@@ -105,7 +105,9 @@ export default function MenuScreen() {
         contentContainerStyle={styles.grid}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
         renderItem={({ item }) => (
-          <ProductCard product={item} onPress={setSelectedProduct} baseUrl={baseUrl} />
+          <View style={{ width: '48.5%' }}>
+            <ProductCard product={item} onPress={setSelectedProduct} baseUrl={baseUrl} />
+          </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
   headerSub: { fontSize: FontSizes.xs, color: Colors.textTertiary, marginTop: 2 },
-  row: { gap: Spacing.md },
+  row: { justifyContent: 'space-between' },
   grid: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 100 },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { fontSize: FontSizes.md, color: Colors.textTertiary },
