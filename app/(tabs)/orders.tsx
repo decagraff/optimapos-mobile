@@ -58,7 +58,7 @@ function OrderCard({ order }: { order: Order }) {
         </View>
 
         <View style={styles.orderFooter}>
-          <Text style={styles.orderTotal}>S/ {order.total.toFixed(2)}</Text>
+          <Text style={styles.orderTotal}>S/ {(Number(order.total) || 0).toFixed(2)}</Text>
           <View style={styles.orderItems}>
             <Text style={styles.orderItemsText}>{order.items?.length || 0} items</Text>
             {expanded ? <ChevronUp size={16} color={Colors.textTertiary} /> : <ChevronDown size={16} color={Colors.textTertiary} />}
@@ -78,7 +78,7 @@ function OrderCard({ order }: { order: Order }) {
                   )}
                   {item.notes && <Text style={styles.itemNotes}>"{item.notes}"</Text>}
                 </View>
-                <Text style={styles.itemPrice}>S/ {item.totalPrice.toFixed(2)}</Text>
+                <Text style={styles.itemPrice}>S/ {(Number(item.totalPrice) || 0).toFixed(2)}</Text>
               </View>
             ))}
           </View>

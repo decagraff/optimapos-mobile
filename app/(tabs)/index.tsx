@@ -68,7 +68,7 @@ function AdminDashboard({ locationId }: { locationId: number | null }) {
   useEffect(() => { fetch().finally(() => setLoading(false)); }, [fetch]);
   const onRefresh = async () => { setRefreshing(true); await fetch(); setRefreshing(false); };
 
-  const fmt = (n: number) => `S/ ${n.toFixed(2)}`;
+  const fmt = (n: number) => `S/ ${(Number(n) || 0).toFixed(2)}`;
 
   if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
 
@@ -338,7 +338,7 @@ function ClientHome() {
                 <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
                 <Badge label={statusLabel(order.status)} color={orderStatusColor(order.status)} />
               </View>
-              <Text style={styles.orderMeta}>{order.type} — S/ {(order.total || 0).toFixed(2)}</Text>
+              <Text style={styles.orderMeta}>{order.type} — S/ {(Number(order.total) || 0).toFixed(2)}</Text>
             </Card>
           ))}
         </>
@@ -359,7 +359,7 @@ function ClientHome() {
             <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
             <Badge label={statusLabel(order.status)} color={orderStatusColor(order.status)} />
           </View>
-          <Text style={styles.orderMeta}>S/ {(order.total || 0).toFixed(2)}</Text>
+          <Text style={styles.orderMeta}>S/ {(Number(order.total) || 0).toFixed(2)}</Text>
         </Card>
       ))}
     </ScrollView>
