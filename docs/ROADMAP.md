@@ -160,59 +160,40 @@
 - [ ] Notificación push de nuevo pedido asignado
 - [ ] Badge de pedidos pendientes en tab
 
-### Fase 3.5 — Módulo Cliente
-- [ ] Home del cliente:
-  - Banners de promos activas
-  - Botón "Repetir último pedido" (1 tap, muestra resumen + precio)
-  - Sección "Tus favoritos" (productos con corazón)
-  - Categorías con imagen
-- [ ] Catálogo: mismos componentes que mesero pero sin opciones de staff
-- [ ] Carrito + Checkout:
-  - Tipo de pedido: Delivery / Para recoger / En mesa
-  - Delivery: selector de dirección guardada o nueva + zona con recargo
-  - Para recoger: solo confirma local y hora estimada
-  - En mesa: número de mesa o escaneo de QR
-  - Campo código de descuento
-  - Método de pago: Efectivo, Yape, Transferencia
-  - Confirmar pedido
-- [ ] Tracking del pedido en tiempo real (Socket.io):
-  - Timeline visual: Confirmado → Preparando → Listo → En camino → Entregado
-  - Tiempo estimado
-- [ ] Mis pedidos (historial):
-  - Lista de pedidos anteriores
-  - Botón "Repetir" en cada pedido
-  - Detalle expandible con items
-- [ ] Favoritos:
-  - Corazón en cada producto para agregar/quitar
-  - Sección dedicada con acceso rápido
-- [ ] Perfil del cliente:
-  - Datos personales (nombre, teléfono)
-  - Direcciones guardadas (CRUD: casa, trabajo, otras)
-  - Cambiar contraseña
-- [ ] Pedir como invitado (sin cuenta):
-  - Solo pide nombre + teléfono en checkout
-  - No tiene historial, favoritos ni repetir pedido
-  - Banner: "Crea una cuenta para guardar tus pedidos"
+### Fase 3.5 — Módulo Cliente (parcial)
+- [ ] Home del cliente (requiere backend: banners, favoritos, repetir pedido)
+- [x] Catálogo: mismos componentes que mesero
+- [x] Carrito + Checkout (Mesa / Para llevar)
+  - [ ] Delivery checkout con dirección + zona (requiere backend)
+  - [ ] Código de descuento (requiere backend)
+- [x] Tracking en tiempo real (Socket.io) — via pantalla de pedidos
+- [x] Mis pedidos con detalle expandible
+  - [ ] Botón "Repetir" (requiere backend)
+- [ ] Favoritos (requiere backend UserFavorite)
+- [x] Perfil del cliente: datos + últimos pedidos + cambiar local
+  - [ ] Direcciones guardadas (requiere backend UserAddress)
+  - [ ] Cambiar contraseña (requiere backend)
+- [ ] Pedir como invitado (requiere backend POST /api/orders/guest)
 
-### Fase 4 — Módulo Manager / Dashboard
-- [ ] Card de ventas del día (total, cantidad, ticket promedio)
-- [ ] Gráfico de ventas por hora (barras)
-- [ ] Top 5 productos más vendidos
-- [ ] Estado de mesas en vivo (grid con colores)
-- [ ] Lista de pedidos activos con filtros
+### Fase 4 — Módulo Manager / Dashboard ✅
+- [x] Card de ventas del día (total, cantidad, ticket promedio, cancelados)
+- [x] Top 5 productos más vendidos (barras visuales)
+- [x] Reportes por periodo (Hoy / 7 días / 30 días) con comparación %
+- [x] Ventas por tipo de pedido y por método de pago
+- [x] Caja: abrir/cerrar, movimientos entrada/salida, resumen en vivo
+- [x] Pull-to-refresh en reportes y caja
+- [x] Estado de mesas en vivo (ya en tab Mesas de waiter/admin)
 - [ ] Toggle rápido de productos (activar/desactivar)
-- [ ] Pull-to-refresh + auto-refresh cada 30s
 
-### Fase 4.5 — Módulo Admin (multi-local)
-- [ ] Selector de local en header (dropdown o modal)
-- [ ] Cambio de contexto: al seleccionar local, todo se filtra por ese local
+### Fase 4.5 — Módulo Admin (multi-local, parcial)
+- [x] Selector de local (pantalla dedicada + botón en "Más")
+- [x] Cambio de contexto: al seleccionar local, todo se filtra por ese local
+- [x] Reportes por local individual (via selector de local)
 - [ ] Dashboard comparativo: ventas de todos los locales en cards
 - [ ] Reportes consolidados (total de todos los locales)
-- [ ] Reportes por local individual
 - [ ] Gestión rápida de productos por local (activar/desactivar)
 - [ ] Lista de usuarios con último acceso por local
 - [ ] Notificaciones agregadas de todos los locales
-- [ ] Vista "Todos los locales" como opción del selector
 
 ### Fase 5 — Push Notifications (FCM)
 - [ ] Integración Firebase Cloud Messaging
