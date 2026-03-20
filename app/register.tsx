@@ -20,10 +20,13 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
 
   const validate = (): string | null => {
-    if (!name.trim()) return 'Ingresa tu nombre';
-    if (!email.trim()) return 'Ingresa tu email';
-    if (!phone.trim()) return 'Ingresa tu teléfono';
-    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+    if (name.trim().length < 2) return 'Nombre debe tener al menos 2 caracteres';
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email.trim())) return 'Ingresa un email válido';
+    if (phone.trim().length < 6) return 'Teléfono debe tener al menos 6 dígitos';
+    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
+    if (!/[A-Z]/.test(password)) return 'La contraseña debe incluir al menos 1 mayúscula';
+    if (!/[a-z]/.test(password)) return 'La contraseña debe incluir al menos 1 minúscula';
+    if (!/[0-9]/.test(password)) return 'La contraseña debe incluir al menos 1 número';
     if (password !== confirmPassword) return 'Las contraseñas no coinciden';
     return null;
   };
@@ -111,7 +114,7 @@ export default function RegisterScreen() {
 
           <Input
             label="Contraseña"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número"
             value={password}
             onChangeText={setPassword}
             secureTextEntry

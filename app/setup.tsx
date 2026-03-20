@@ -63,7 +63,7 @@ export default function SetupScreen() {
           </View>
           <Text style={styles.title}>Conectar restaurante</Text>
           <Text style={styles.subtitle}>
-            Ingresa el código que te proporcionó tu administrador
+            Ingresa el código de tu restaurante para comenzar
           </Text>
 
           <Input
@@ -88,8 +88,8 @@ export default function SetupScreen() {
           />
 
           <Text style={styles.hint}>
-            El código es el nombre de tu restaurante en el sistema.{'\n'}
-            Ejemplo: doncarlyn, misushi, labuena
+            Busca el código en la carta del restaurante, en el QR{'\n'}
+            o pregunta al personal. Ej: doncarlyn, misushi
           </Text>
         </View>
       </ScrollView>
