@@ -110,20 +110,21 @@
 
 ## Fases de Desarrollo
 
-### Fase 1 — Base + Autenticación
-- [ ] Splash screen con logo OptimaPOS
-- [ ] Pantalla de configuración inicial (código del restaurante o QR)
-- [ ] Validación de servidor (`/api/health`)
-- [ ] Login con email/password (staff)
-- [ ] Registro de cliente (nombre + teléfono + password)
-- [ ] Persistencia de token (SecureStore)
-- [ ] Selección de local (si el tenant tiene varios)
+### Fase 1 — Base + Autenticación ✅
+- [x] Splash screen con logo OptimaPOS
+- [x] Pantalla de configuración inicial (código del restaurante)
+- [x] Validación de servidor (`/api/health`)
+- [x] Login con email/password (staff)
+- [x] Registro de cliente (nombre + teléfono + password)
+- [x] Persistencia de token (SecureStore)
+- [x] Selección de local (si el tenant tiene varios)
   - Si solo 1 local → skip automático
-  - Opción "Recordar mi selección"
-- [ ] Navegación por tabs según rol del usuario
-- [ ] Conexión Socket.io para eventos real-time
-- [ ] Componentes base del design system
-- [ ] Manejo de errores global (red de seguridad)
+  - Local actual visible en header y pantalla "Más"
+- [x] Navegación por tabs según rol del usuario
+- [x] Conexión Socket.io para eventos real-time
+- [x] Componentes base del design system (Button, Card, Input, Badge, EmptyState, LoadingScreen, ErrorBoundary)
+- [x] Manejo de errores global (ErrorBoundary)
+- [x] Dashboard por rol (Admin, Waiter, Kitchen, Cashier, Delivery, Client)
 
 ### Fase 2 — Módulo Mesero
 - [ ] Catálogo: categorías como chips horizontales scrollables
@@ -343,21 +344,24 @@ Abre la app (o escanea QR del restaurante general)
 
 ## Guía de Diseño
 
-### Paleta de Colores
+### Paleta de Colores — Slate + Amber (profesional)
 
 | Uso              | Color             | Hex       | Tailwind     |
 |------------------|-------------------|-----------|--------------|
-| Primario         | Naranja OptimaPOS | `#F97316` | orange-500   |
-| Primario dark    | Naranja oscuro    | `#EA580C` | orange-600   |
-| Acento / Éxito   | Verde             | `#22C55E` | green-500    |
-| Peligro          | Rojo              | `#EF4444` | red-500      |
-| Advertencia      | Amarillo          | `#F59E0B` | amber-500    |
-| Info             | Azul              | `#3B82F6` | blue-500     |
-| Fondo app        | Gris muy claro    | `#F9FAFB` | gray-50      |
+| Primario         | Slate oscuro      | `#1E293B` | slate-800    |
+| Primario dark    | Slate muy oscuro  | `#0F172A` | slate-900    |
+| Acento / CTAs    | Amber             | `#F59E0B` | amber-500    |
+| Acento dark      | Amber oscuro      | `#D97706` | amber-600    |
+| Éxito            | Esmeralda         | `#059669` | emerald-600  |
+| Peligro          | Rojo              | `#DC2626` | red-600      |
+| Advertencia      | Amber oscuro      | `#D97706` | amber-600    |
+| Info             | Azul              | `#2563EB` | blue-600     |
+| Fondo app        | Slate muy claro   | `#F8FAFC` | slate-50     |
 | Fondo cards      | Blanco            | `#FFFFFF` | white        |
-| Texto principal  | Gris oscuro       | `#111827` | gray-900     |
-| Texto secundario | Gris medio        | `#6B7280` | gray-500     |
-| Bordes           | Gris suave        | `#E5E7EB` | gray-200     |
+| Texto principal  | Slate muy oscuro  | `#0F172A` | slate-900    |
+| Texto secundario | Slate medio       | `#475569` | slate-600    |
+| Texto terciario  | Slate claro       | `#94A3B8` | slate-400    |
+| Bordes           | Slate suave       | `#E2E8F0` | slate-200    |
 
 #### Modo Oscuro (Fase 7)
 
@@ -385,7 +389,7 @@ Sistema de 4px: `4, 8, 12, 16, 20, 24, 32, 40, 48`
 
 - Cards: `borderRadius: 12`, sombra suave (`elevation: 2` Android, `shadowOpacity: 0.08` iOS)
 - Botones: `borderRadius: 8`
-- Inputs: `borderRadius: 8`, borde `gray-200`, focus borde `orange-500`
+- Inputs: `borderRadius: 8`, borde `gray-200`, focus borde `slate-800`
 - Chips/badges: `borderRadius: 20` (pill)
 
 ### Iconos
@@ -399,7 +403,7 @@ Sistema de 4px: `4, 8, 12, 16, 20, 24, 32, 40, 48`
 ### Bottom Tabs
 
 - Ícono + label siempre visible
-- Tab activo: naranja (`#F97316`), inactivo: gris (`#6B7280`)
+- Tab activo: slate (`#1E293B`), inactivo: slate-400 (`#94A3B8`)
 - Fondo blanco, borde superior sutil
 
 Tabs por rol:
