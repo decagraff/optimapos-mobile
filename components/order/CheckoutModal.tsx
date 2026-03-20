@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput, Alert, ScrollView } from 'react-native';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
-import { X, UtensilsCrossed, ShoppingBag, MapPin } from 'lucide-react-native';
+import { X, UtensilsCrossed, ShoppingBag, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
 import { api } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,12 +16,20 @@ interface Props {
 }
 
 export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
-  const { selectedLocationId } = useAuth();
+  const { selectedLocationId, user } = useAuth();
   const cart = useCart();
   const [tables, setTables] = useState<Table[]>([]);
   const [showTables, setShowTables] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Delivery fields for clients
+  const [deliveryAddress, setDeliveryAddress] = useState(user?.address || '');
+  const [deliveryPhone, setDeliveryPhone] = useState(user?.phone || '');
+  const [deliveryName, setDeliveryName] = useState(user?.name || '');
+
+  const isClient = user?.role === 'CLIENT';
+  const isStaff = !isClient;
 
   useEffect(() => {
     if (visible && selectedLocationId) {
@@ -29,10 +37,30 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
     }
   }, [visible, selectedLocationId]);
 
+  // Reset delivery fields when modal opens
+  useEffect(() => {
+    if (visible) {
+      setDeliveryAddress(user?.address || '');
+      setDeliveryPhone(user?.phone || '');
+      setDeliveryName(user?.name || '');
+      setError('');
+    }
+  }, [visible, user]);
+
   const handleSubmit = async () => {
     if (cart.orderType === 'DINE_IN' && !cart.tableId) {
       setError('Selecciona una mesa');
       return;
+    }
+    if (cart.orderType === 'DELIVERY') {
+      if (!deliveryAddress.trim()) {
+        setError('Ingresa la dirección de entrega');
+        return;
+      }
+      if (!deliveryPhone.trim()) {
+        setError('Ingresa un teléfono de contacto');
+        return;
+      }
     }
     if (cart.items.length === 0) return;
 
@@ -62,6 +90,13 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
       if (type === 'DINE_IN' && cart.tableId) orderData.tableId = cart.tableId;
       if (cart.notes) orderData.notes = cart.notes;
 
+      // Delivery data
+      if (type === 'DELIVERY') {
+        orderData.guestAddress = deliveryAddress.trim();
+        if (deliveryPhone.trim()) orderData.guestPhone = deliveryPhone.trim();
+        if (deliveryName.trim()) orderData.guestName = deliveryName.trim();
+      }
+
       await api.createOrder(orderData);
       cart.clear();
       onSuccess();
@@ -78,6 +113,19 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
     setError('');
   };
 
+  // Order type options depending on role
+  const orderTypes: { key: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'; label: string; icon: any }[] = isClient
+    ? [
+        { key: 'TAKEAWAY', label: 'Para recoger', icon: ShoppingBag },
+        { key: 'DELIVERY', label: 'Delivery', icon: Truck },
+        { key: 'DINE_IN', label: 'En mesa', icon: UtensilsCrossed },
+      ]
+    : [
+        { key: 'DINE_IN', label: 'En mesa', icon: UtensilsCrossed },
+        { key: 'TAKEAWAY', label: 'Para llevar', icon: ShoppingBag },
+        { key: 'DELIVERY', label: 'Delivery', icon: Truck },
+      ];
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={styles.container}>
@@ -88,24 +136,25 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
           </Pressable>
         </View>
 
-        <View style={styles.body}>
+        <ScrollView style={styles.scrollBody} contentContainerStyle={styles.body}>
           {/* Order Type */}
           <Text style={styles.sectionTitle}>Tipo de pedido</Text>
           <View style={styles.typeRow}>
-            <Pressable
-              style={[styles.typeOption, cart.orderType === 'DINE_IN' && styles.typeSelected]}
-              onPress={() => cart.setOrderType('DINE_IN')}
-            >
-              <UtensilsCrossed size={20} color={cart.orderType === 'DINE_IN' ? Colors.accent : Colors.textSecondary} />
-              <Text style={[styles.typeText, cart.orderType === 'DINE_IN' && styles.typeTextSelected]}>En mesa</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.typeOption, cart.orderType === 'TAKEAWAY' && styles.typeSelected]}
-              onPress={() => { cart.setOrderType('TAKEAWAY'); cart.setTable(null, null); }}
-            >
-              <ShoppingBag size={20} color={cart.orderType === 'TAKEAWAY' ? Colors.accent : Colors.textSecondary} />
-              <Text style={[styles.typeText, cart.orderType === 'TAKEAWAY' && styles.typeTextSelected]}>Para llevar</Text>
-            </Pressable>
+            {orderTypes.map(opt => (
+              <Pressable
+                key={opt.key}
+                style={[styles.typeOption, cart.orderType === opt.key && styles.typeSelected]}
+                onPress={() => {
+                  cart.setOrderType(opt.key);
+                  if (opt.key !== 'DINE_IN') cart.setTable(null, null);
+                }}
+              >
+                <opt.icon size={18} color={cart.orderType === opt.key ? Colors.accent : Colors.textSecondary} />
+                <Text style={[styles.typeText, cart.orderType === opt.key && styles.typeTextSelected]}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
 
           {/* Table selection */}
@@ -118,6 +167,45 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
                   {cart.tableName || 'Seleccionar mesa'}
                 </Text>
               </Pressable>
+            </>
+          )}
+
+          {/* Delivery fields */}
+          {cart.orderType === 'DELIVERY' && (
+            <>
+              <Text style={styles.sectionTitle}>Datos de entrega</Text>
+              <View style={styles.inputRow}>
+                <UserIcon size={18} color={Colors.textTertiary} />
+                <TextInput
+                  style={styles.deliveryInput}
+                  value={deliveryName}
+                  onChangeText={setDeliveryName}
+                  placeholder="Nombre"
+                  placeholderTextColor={Colors.textTertiary}
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Phone size={18} color={Colors.textTertiary} />
+                <TextInput
+                  style={styles.deliveryInput}
+                  value={deliveryPhone}
+                  onChangeText={setDeliveryPhone}
+                  placeholder="Teléfono *"
+                  placeholderTextColor={Colors.textTertiary}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <MapPin size={18} color={Colors.textTertiary} />
+                <TextInput
+                  style={[styles.deliveryInput, { minHeight: 50 }]}
+                  value={deliveryAddress}
+                  onChangeText={setDeliveryAddress}
+                  placeholder="Dirección de entrega *"
+                  placeholderTextColor={Colors.textTertiary}
+                  multiline
+                />
+              </View>
             </>
           )}
 
@@ -141,7 +229,7 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <Button
@@ -181,23 +269,23 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.text },
   closeBtn: { padding: Spacing.xs },
-  body: { flex: 1, padding: Spacing.xl },
+  scrollBody: { flex: 1 },
+  body: { padding: Spacing.xl, paddingBottom: Spacing.xxxl },
   sectionTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.xl, marginBottom: Spacing.md },
-  typeRow: { flexDirection: 'row', gap: Spacing.md },
+  typeRow: { flexDirection: 'row', gap: Spacing.sm },
   typeOption: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.lg,
+    gap: 4,
+    paddingVertical: Spacing.md,
     borderRadius: Radii.md,
     borderWidth: 2,
     borderColor: Colors.border,
     backgroundColor: Colors.card,
   },
   typeSelected: { borderColor: Colors.accent, backgroundColor: Colors.accentLight },
-  typeText: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.textSecondary },
+  typeText: { fontSize: FontSizes.xs, fontWeight: '600', color: Colors.textSecondary },
   typeTextSelected: { color: Colors.accent },
   tableBtn: {
     flexDirection: 'row',
@@ -211,6 +299,25 @@ const styles = StyleSheet.create({
   },
   tableBtnText: { fontSize: FontSizes.md, color: Colors.textTertiary },
   tableBtnTextActive: { color: Colors.text, fontWeight: '600' },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radii.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+    marginBottom: Spacing.sm,
+  },
+  deliveryInput: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    fontSize: FontSizes.md,
+    color: Colors.text,
+  },
+
   notesInput: {
     backgroundColor: Colors.card,
     borderRadius: Radii.sm,

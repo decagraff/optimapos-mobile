@@ -120,7 +120,7 @@ function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; o
   );
 }
 
-const STAFF_ROLES = ['ADMIN', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN'];
+const STAFF_ROLES = ['ADMIN', 'MANAGER', 'VENDOR', 'KITCHEN'];
 
 export default function OrdersScreen() {
   const { user } = useAuth();

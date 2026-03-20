@@ -26,16 +26,11 @@ export const TAB_CONFIG: Record<Role, TabDef[]> = {
     { name: 'reports', title: 'Reportes', icon: BarChart3 },
     { name: 'more', title: 'Más', icon: Menu },
   ],
-  CASHIER: [
+  VENDOR: [
     { name: 'pos', title: 'POS', icon: ShoppingCart },
     { name: 'orders', title: 'Pedidos', icon: ClipboardList },
-    { name: 'cash', title: 'Caja', icon: Wallet },
-    { name: 'more', title: 'Más', icon: Menu },
-  ],
-  WAITER: [
-    { name: 'menu', title: 'Menú', icon: UtensilsCrossed },
-    { name: 'orders', title: 'Pedidos', icon: ClipboardList },
     { name: 'tables', title: 'Mesas', icon: Grid3X3 },
+    { name: 'cash', title: 'Caja', icon: Wallet },
     { name: 'more', title: 'Más', icon: Menu },
   ],
   KITCHEN: [
@@ -48,7 +43,7 @@ export const TAB_CONFIG: Record<Role, TabDef[]> = {
     { name: 'more', title: 'Más', icon: Menu },
   ],
   CLIENT: [
-    { name: 'menu', title: 'Menú', icon: UtensilsCrossed },
+    { name: 'menu', title: 'Carta', icon: UtensilsCrossed },
     { name: 'orders', title: 'Pedidos', icon: ClipboardList },
     { name: 'profile', title: 'Perfil', icon: User },
   ],

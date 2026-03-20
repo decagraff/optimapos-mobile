@@ -399,12 +399,10 @@ export default function DashboardScreen() {
       case 'ADMIN':
       case 'MANAGER':
         return <AdminDashboard locationId={selectedLocationId} />;
-      case 'WAITER':
+      case 'VENDOR':
         return <WaiterDashboard locationId={selectedLocationId} />;
       case 'KITCHEN':
         return <KitchenDashboard locationId={selectedLocationId} />;
-      case 'CASHIER':
-        return <CashierDashboard />;
       case 'DELIVERY':
         return <DeliveryDashboard />;
       case 'CLIENT':

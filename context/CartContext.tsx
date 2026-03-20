@@ -6,7 +6,7 @@ interface CartState {
   items: CartItem[];
   tableId: number | null;
   tableName: string | null;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   notes: string;
 }
 
@@ -15,7 +15,7 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; id: string }
   | { type: 'UPDATE_QTY'; id: string; quantity: number }
   | { type: 'SET_TABLE'; tableId: number | null; tableName: string | null }
-  | { type: 'SET_ORDER_TYPE'; orderType: 'DINE_IN' | 'TAKEAWAY' }
+  | { type: 'SET_ORDER_TYPE'; orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' }
   | { type: 'SET_NOTES'; notes: string }
   | { type: 'CLEAR' };
 
@@ -23,7 +23,7 @@ interface CartContextType {
   items: CartItem[];
   tableId: number | null;
   tableName: string | null;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   notes: string;
   itemCount: number;
   total: number;
@@ -31,7 +31,7 @@ interface CartContextType {
   removeItem: (id: string) => void;
   updateQty: (id: string, quantity: number) => void;
   setTable: (tableId: number | null, tableName: string | null) => void;
-  setOrderType: (type: 'DINE_IN' | 'TAKEAWAY') => void;
+  setOrderType: (type: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY') => void;
   setNotes: (notes: string) => void;
   clear: () => void;
 }
@@ -119,7 +119,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeItem = useCallback((id: string) => dispatch({ type: 'REMOVE_ITEM', id }), []);
   const updateQty = useCallback((id: string, quantity: number) => dispatch({ type: 'UPDATE_QTY', id, quantity }), []);
   const setTable = useCallback((tableId: number | null, tableName: string | null) => dispatch({ type: 'SET_TABLE', tableId, tableName }), []);
-  const setOrderType = useCallback((orderType: 'DINE_IN' | 'TAKEAWAY') => dispatch({ type: 'SET_ORDER_TYPE', orderType }), []);
+  const setOrderType = useCallback((orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY') => dispatch({ type: 'SET_ORDER_TYPE', orderType }), []);
   const setNotes = useCallback((notes: string) => dispatch({ type: 'SET_NOTES', notes }), []);
   const clear = useCallback(() => dispatch({ type: 'CLEAR' }), []);
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator,
+  View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
@@ -14,8 +14,11 @@ import type { Order, OrderStatus } from '@/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateStr).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -30,6 +33,23 @@ function getCustomerName(order: Order): string {
 function getAddress(order: Order): string | null {
   return order.guestAddress || order.user?.address || null;
 }
+
+function todayStr(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+const PERIOD_OPTIONS = [
+  { label: 'Hoy', days: 0 },
+  { label: '7 días', days: 7 },
+  { label: '30 días', days: 30 },
+  { label: '3 meses', days: 90 },
+];
 
 // ─── History Card ─────────────────────────────────────────────────────
 function HistoryCard({ order }: { order: Order }) {
@@ -69,7 +89,9 @@ function HistoryCard({ order }: { order: Order }) {
         <Text style={styles.total}>S/ {(Number(order.total) || 0).toFixed(2)}</Text>
         <View style={styles.timeInfo}>
           <Clock size={12} color={Colors.textTertiary} />
-          <Text style={styles.footerText}>{formatTime(order.updatedAt || order.createdAt)}</Text>
+          <Text style={styles.footerText}>
+            {formatDate(order.updatedAt || order.createdAt)} {formatTime(order.updatedAt || order.createdAt)}
+          </Text>
         </View>
       </View>
     </Card>
@@ -82,20 +104,27 @@ export default function HistoryScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [periodIdx, setPeriodIdx] = useState(0);
 
   const fetchOrders = useCallback(async () => {
     try {
-      // Use getMyOrders — it returns all orders for the current user
       const data = await api.getMyOrders();
-      // Filter to only delivered/cancelled
-      const completed = data.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-      // Sort most recent first
-      completed.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      setOrders(completed);
-    } catch {}
-  }, []);
+      const completed = (Array.isArray(data) ? data : [])
+        .filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
 
-  useEffect(() => { fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
+      // Filter by period
+      const period = PERIOD_OPTIONS[periodIdx];
+      const cutoff = period.days === 0
+        ? new Date(todayStr()).getTime()
+        : new Date(daysAgo(period.days)).getTime();
+
+      const filtered = completed.filter(o => new Date(o.updatedAt || o.createdAt).getTime() >= cutoff);
+      filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      setOrders(filtered);
+    } catch {}
+  }, [periodIdx]);
+
+  useEffect(() => { setLoading(true); fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
 
   useEffect(() => {
     if (!socket) return;
@@ -110,15 +139,6 @@ export default function HistoryScreen() {
 
   const onRefresh = async () => { setRefreshing(true); await fetchOrders(); setRefreshing(false); };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
-      </SafeAreaView>
-    );
-  }
-
-  // Stats
   const delivered = orders.filter(o => o.status === 'DELIVERED');
   const totalAmount = delivered.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
@@ -127,6 +147,21 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <History size={22} color={Colors.accent} />
         <Text style={styles.headerTitle}>Historial</Text>
+      </View>
+
+      {/* Period filter */}
+      <View style={styles.periodRow}>
+        {PERIOD_OPTIONS.map((opt, idx) => (
+          <Pressable
+            key={opt.label}
+            style={[styles.periodChip, idx === periodIdx && styles.periodChipActive]}
+            onPress={() => setPeriodIdx(idx)}
+          >
+            <Text style={[styles.periodText, idx === periodIdx && styles.periodTextActive]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {/* Stats row */}
@@ -143,16 +178,20 @@ export default function HistoryScreen() {
         </View>
       )}
 
-      <FlatList
-        data={orders}
-        keyExtractor={o => String(o.id)}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
-        ListEmptyComponent={
-          <EmptyState icon={History} title="Sin historial" subtitle="Las entregas completadas aparecerán aquí" />
-        }
-        renderItem={({ item }) => <HistoryCard order={item} />}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={orders}
+          keyExtractor={o => String(o.id)}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
+          ListEmptyComponent={
+            <EmptyState icon={History} title="Sin historial" subtitle="Las entregas completadas aparecerán aquí" />
+          }
+          renderItem={({ item }) => <HistoryCard order={item} />}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -166,15 +205,36 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
   headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
+
+  periodRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  periodChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  periodChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  periodText: { fontSize: FontSizes.xs, fontWeight: '600', color: Colors.textSecondary },
+  periodTextActive: { color: '#FFFFFF' },
 
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
   },
   statCard: {
     flex: 1,
