@@ -99,11 +99,11 @@ function WaiterDashboard({ locationId }: { locationId: number | null }) {
     try {
       const locParam = locationId ? `?locationId=${locationId}` : '';
       const [ordRes, tabRes] = await Promise.all([
-        api.get<any[]>('/api/orders/my'),
+        api.get<{ orders: any[] }>('/api/orders/my'),
         api.get<any[]>(`/api/tables/all${locParam}`),
       ]);
-      setOrders(ordRes);
-      setTables(tabRes);
+      setOrders(ordRes.orders || []);
+      setTables(Array.isArray(tabRes) ? tabRes : []);
     } catch {}
   }, [locationId]);
 
@@ -311,8 +311,8 @@ function ClientHome() {
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await api.get<any[]>('/api/orders/my');
-      setOrders(data);
+      const data = await api.get<{ orders: any[] }>('/api/orders/my');
+      setOrders(data.orders || []);
     } catch {}
   }, []);
 
@@ -390,7 +390,7 @@ function minutesAgo(dateStr: string): string {
 
 // ─── Main Screen ─────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const { user, selectedLocationId } = useAuth();
+  const { user, selectedLocationId, selectedLocationName } = useAuth();
   const { isConnected } = useSocket();
   const role = user?.role || 'CLIENT';
 
@@ -418,9 +418,17 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greetingText}>Hola, {user?.name?.split(' ')[0] || 'Usuario'}</Text>
-          <Text style={styles.roleBadge}>{role}</Text>
+          <View style={styles.subHeaderRow}>
+            <Text style={styles.roleBadge}>{role}</Text>
+            {selectedLocationName && (
+              <>
+                <View style={styles.headerDot} />
+                <Text style={styles.locationBadge} numberOfLines={1}>{selectedLocationName}</Text>
+              </>
+            )}
+          </View>
         </View>
         <View style={styles.statusRow}>
           <View style={[styles.dot, isConnected ? styles.dotOnline : styles.dotOffline]} />
@@ -445,7 +453,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   greetingText: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
-  roleBadge: { fontSize: FontSizes.xs, fontWeight: '600', color: Colors.accent, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 },
+  subHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 6 },
+  roleBadge: { fontSize: FontSizes.xs, fontWeight: '600', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
+  headerDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.textTertiary },
+  locationBadge: { fontSize: FontSizes.xs, fontWeight: '500', color: Colors.textSecondary, flexShrink: 1 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   dotOnline: { backgroundColor: Colors.success },

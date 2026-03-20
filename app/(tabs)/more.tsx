@@ -7,10 +7,10 @@ import { useSocket } from '@/hooks/useSocket';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { User, LogOut, Building2, Wifi, WifiOff, RefreshCw } from 'lucide-react-native';
+import { User, LogOut, Building2, MapPin, Wifi, WifiOff, RefreshCw } from 'lucide-react-native';
 
 export default function MoreScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, selectedLocationName } = useAuth();
   const { config, disconnect } = useServer();
   const { isConnected } = useSocket();
 
@@ -68,10 +68,18 @@ export default function MoreScreen() {
         </View>
         <View style={styles.divider} />
         <View style={styles.infoRow}>
+          <MapPin size={18} color={selectedLocationName ? Colors.accent : Colors.textTertiary} />
+          <Text style={styles.infoLabel}>Local</Text>
+          <Text style={[styles.infoValue, selectedLocationName ? { color: Colors.accent } : {}]}>
+            {selectedLocationName || 'No seleccionado'}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
           {isConnected ? <Wifi size={18} color={Colors.success} /> : <WifiOff size={18} color={Colors.danger} />}
-          <Text style={styles.infoLabel}>Socket.io</Text>
+          <Text style={styles.infoLabel}>Conexión</Text>
           <Text style={[styles.infoValue, { color: isConnected ? Colors.success : Colors.danger }]}>
-            {isConnected ? 'Conectado' : 'Desconectado'}
+            {isConnected ? 'En línea' : 'Sin conexión'}
           </Text>
         </View>
         <View style={styles.divider} />
@@ -83,8 +91,8 @@ export default function MoreScreen() {
 
       {/* Actions */}
       <View style={styles.actions}>
-        {(user?.locationIds?.length ?? 0) > 1 && (
-          <Button title="Cambiar local" onPress={handleChangeLocation} variant="outline" fullWidth icon={RefreshCw} />
+        {user?.role !== 'CLIENT' && (
+          <Button title="Cambiar local" onPress={handleChangeLocation} variant="outline" fullWidth icon={MapPin} />
         )}
         <Button title="Cambiar restaurante" onPress={handleChangeServer} variant="secondary" fullWidth icon={Building2} />
         <Button title="Cerrar sesión" onPress={handleLogout} variant="danger" fullWidth icon={LogOut} />

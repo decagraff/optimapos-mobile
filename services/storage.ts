@@ -5,6 +5,7 @@ const KEYS = {
   USER: 'auth_user',
   SLUG: 'server_slug',
   LOCATION_ID: 'selected_location_id',
+  LOCATION_NAME: 'selected_location_name',
 } as const;
 
 export const storage = {
@@ -41,12 +42,19 @@ export const storage = {
   async setLocationId(id: number): Promise<void> {
     await SecureStore.setItemAsync(KEYS.LOCATION_ID, String(id));
   },
+  async getLocationName(): Promise<string | null> {
+    return SecureStore.getItemAsync(KEYS.LOCATION_NAME);
+  },
+  async setLocationName(name: string): Promise<void> {
+    await SecureStore.setItemAsync(KEYS.LOCATION_NAME, name);
+  },
 
   // Clear all auth data
   async clearAuth(): Promise<void> {
     await SecureStore.deleteItemAsync(KEYS.TOKEN);
     await SecureStore.deleteItemAsync(KEYS.USER);
     await SecureStore.deleteItemAsync(KEYS.LOCATION_ID);
+    await SecureStore.deleteItemAsync(KEYS.LOCATION_NAME);
   },
 
   // Clear everything (including server)
@@ -55,5 +63,6 @@ export const storage = {
     await SecureStore.deleteItemAsync(KEYS.USER);
     await SecureStore.deleteItemAsync(KEYS.SLUG);
     await SecureStore.deleteItemAsync(KEYS.LOCATION_ID);
+    await SecureStore.deleteItemAsync(KEYS.LOCATION_NAME);
   },
 };

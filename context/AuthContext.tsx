@@ -11,10 +11,11 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   selectedLocationId: number | null;
+  selectedLocationName: string | null;
   login: (email: string, password: string) => Promise<User>;
   register: (data: { name: string; email: string; phone: string; password: string }) => Promise<User>;
   logout: () => Promise<void>;
-  selectLocation: (id: number) => Promise<void>;
+  selectLocation: (id: number, name?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   selectedLocationId: null,
+  selectedLocationName: null,
   login: async () => { throw new Error('Not initialized'); },
   register: async () => { throw new Error('Not initialized'); },
   logout: async () => {},
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
+  const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Restore session on mount
@@ -63,7 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(savedToken);
 
         const savedLocId = await storage.getLocationId();
-        if (savedLocId) setSelectedLocationId(savedLocId);
+        if (savedLocId) {
+          setSelectedLocationId(savedLocId);
+          const savedLocName = await storage.getLocationName();
+          if (savedLocName) setSelectedLocationName(savedLocName);
+        }
       } catch {
         // Token invalid, clear
         await storage.clearAuth();
@@ -120,11 +127,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     setSelectedLocationId(null);
+    setSelectedLocationName(null);
   }, []);
 
-  const selectLocation = useCallback(async (id: number) => {
+  const selectLocation = useCallback(async (id: number, name?: string) => {
     setSelectedLocationId(id);
     await storage.setLocationId(id);
+    if (name) {
+      setSelectedLocationName(name);
+      await storage.setLocationName(name);
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -136,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, token, isLoading, isAuthenticated: !!user && !!token,
-      selectedLocationId, login, register, logout, selectLocation, refreshProfile,
+      selectedLocationId, selectedLocationName, login, register, logout, selectLocation, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

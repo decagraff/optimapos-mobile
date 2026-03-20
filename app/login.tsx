@@ -35,7 +35,7 @@ export default function LoginScreen() {
         }
         // Only 1 location — auto-select it
         if (activeLocations.length === 1) {
-          await selectLocation(activeLocations[0].id);
+          await selectLocation(activeLocations[0].id, activeLocations[0].name);
         }
       } catch {}
 

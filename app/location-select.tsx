@@ -29,7 +29,7 @@ export default function LocationSelectScreen() {
 
   const handleSelect = async (loc: Location) => {
     setSelected(loc.id);
-    await selectLocation(loc.id);
+    await selectLocation(loc.id, loc.name);
     router.replace('/(tabs)');
   };
 
