@@ -125,6 +125,15 @@ class ApiClient {
   async updateOrderStatus(orderId: number, status: string): Promise<Order> {
     return this.patch(`/api/orders/${orderId}/status`, { status });
   }
+
+  async getKitchenOrders(locationId?: number): Promise<any[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/orders/kitchen/active${q}`);
+  }
+
+  async updateKitchenStatus(orderId: number, status: string): Promise<any> {
+    return this.patch(`/api/orders/kitchen/${orderId}/status`, { status });
+  }
 }
 
 export const api = new ApiClient();
