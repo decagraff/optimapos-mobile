@@ -1,4 +1,4 @@
-import type { LoginResponse, Location, User, Product, Category, Table, Order } from '@/types';
+import type { LoginResponse, Location, User, Product, Category, Table, Order, AddonGroup } from '@/types';
 
 class ApiError extends Error {
   status: number;
@@ -106,6 +106,11 @@ class ApiClient {
     if (categoryId) params.set('categoryId', String(categoryId));
     const q = params.toString() ? `?${params}` : '';
     return this.get(`/api/products${q}`);
+  }
+
+  async getAddonGroups(locationId?: number): Promise<AddonGroup[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/addons/groups${q}`);
   }
 
   async getTables(locationId?: number): Promise<Table[]> {

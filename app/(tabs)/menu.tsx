@@ -13,7 +13,7 @@ import ProductCard from '@/components/catalog/ProductCard';
 import ProductDetail from '@/components/catalog/ProductDetail';
 import CartSheet from '@/components/order/CartSheet';
 import CheckoutModal from '@/components/order/CheckoutModal';
-import type { Product, Category, CartItem } from '@/types';
+import type { Product, Category, CartItem, AddonGroup } from '@/types';
 
 export default function MenuScreen() {
   const { selectedLocationId, selectedLocationName } = useAuth();
@@ -25,6 +25,7 @@ export default function MenuScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [addonGroups, setAddonGroups] = useState<AddonGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -33,12 +34,14 @@ export default function MenuScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [cats, prods] = await Promise.all([
+      const [cats, prods, addGrps] = await Promise.all([
         api.getCategories(selectedLocationId || undefined),
         api.getProducts(selectedLocationId || undefined),
+        api.getAddonGroups(selectedLocationId || undefined),
       ]);
       setCategories(Array.isArray(cats) ? cats : []);
       setProducts(Array.isArray(prods) ? prods : []);
+      setAddonGroups(Array.isArray(addGrps) ? addGrps : []);
     } catch {}
   }, [selectedLocationId]);
 
@@ -134,6 +137,7 @@ export default function MenuScreen() {
         onClose={() => setSelectedProduct(null)}
         onAdd={handleAddToCart}
         baseUrl={baseUrl}
+        locationAddonGroups={addonGroups}
       />
 
       {/* Cart Bottom Sheet */}
