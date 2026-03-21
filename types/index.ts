@@ -159,6 +159,7 @@ export interface Order {
   user?: { name: string; phone: string; address?: string | null } | null;
   deliveryUser?: { id: number; name: string; phone: string } | null;
   deliveryUserId?: number | null;
+  deliveryPhoto?: string | null;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;

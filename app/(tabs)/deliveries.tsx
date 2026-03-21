@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, RefreshControl,
-  Vibration, Linking, Image, Alert,
+  Vibration, Linking, Image, Alert, SectionList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
 import {
   Truck, Clock, MapPin, Phone, ArrowRight, Package, Navigation,
-  CheckCircle2, User, Camera,
+  CheckCircle2, User, Camera, Hand,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { OrderListSkeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
@@ -31,46 +32,59 @@ function timerLabel(mins: number): string {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendiente',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Preparando',
   READY_PICKUP: 'Listo para recoger',
   ON_THE_WAY: 'En camino',
   DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-};
-
-const NEXT_ACTION: Record<string, { status: string; label: string; color: string; icon: any } | null> = {
-  READY_PICKUP: { status: 'ON_THE_WAY', label: 'Recogido · En camino', color: '#8B5CF6', icon: Navigation },
-  ON_THE_WAY:   { status: 'DELIVERED',  label: 'Entregado',            color: Colors.success, icon: CheckCircle2 },
 };
 
 function getCustomerName(order: Order): string {
   return order.guestName || order.user?.name || 'Cliente';
 }
-
 function getCustomerPhone(order: Order): string | null {
   return order.guestPhone || order.user?.phone || null;
 }
-
 function getCustomerAddress(order: Order): string | null {
   return order.guestAddress || order.user?.address || null;
 }
 
 // ─── Delivery Card ────────────────────────────────────────────────────
-function DeliveryCard({ order, onAction, onPhoto }: { order: Order; onAction: (id: number, status: string) => void; onPhoto: (id: number) => void }) {
+function DeliveryCard({
+  order, onAction, onPhoto, onClaim, isMyOrder,
+}: {
+  order: Order;
+  onAction: (id: number, status: string) => void;
+  onPhoto: (id: number) => void;
+  onClaim: (id: number) => void;
+  isMyOrder: boolean;
+}) {
   const [updating, setUpdating] = useState(false);
   const mins = minutesSince(order.createdAt);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
-  const nextAction = NEXT_ACTION[order.status] || null;
   const customerPhone = getCustomerPhone(order);
   const customerAddress = getCustomerAddress(order);
-  const isActionable = order.status === 'READY_PICKUP' || order.status === 'ON_THE_WAY';
+  const hasPhoto = !!(order as any).deliveryPhoto;
+  const isOnTheWay = order.status === 'ON_THE_WAY';
+  const isReady = order.status === 'READY_PICKUP';
 
-  const handleAction = async () => {
-    if (!nextAction) return;
+  const handlePickup = async () => {
     setUpdating(true);
-    await onAction(order.id, nextAction.status);
+    await onAction(order.id, 'ON_THE_WAY');
+    setUpdating(false);
+  };
+
+  const handleDelivered = async () => {
+    if (!hasPhoto) {
+      Alert.alert('Foto requerida', 'Debes tomar una foto de entrega antes de marcar como entregado');
+      return;
+    }
+    setUpdating(true);
+    await onAction(order.id, 'DELIVERED');
+    setUpdating(false);
+  };
+
+  const handleClaim = async () => {
+    setUpdating(true);
+    await onClaim(order.id);
     setUpdating(false);
   };
 
@@ -86,7 +100,7 @@ function DeliveryCard({ order, onAction, onPhoto }: { order: Order; onAction: (i
   };
 
   return (
-    <Card style={[styles.card, isActionable && styles.cardActive]}>
+    <Card style={[styles.card, isMyOrder && styles.cardMine]}>
       {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
@@ -146,51 +160,90 @@ function DeliveryCard({ order, onAction, onPhoto }: { order: Order; onAction: (i
         </View>
       )}
 
-      {/* Quick actions: Maps + Call */}
-      {(customerAddress || customerPhone) && (
-        <View style={styles.quickActions}>
-          {customerAddress && (
-            <Pressable style={[styles.quickBtn, styles.quickBtnMaps]} onPress={openMaps}>
-              <Navigation size={16} color="#FFFFFF" />
-              <Text style={styles.quickBtnText}>Abrir Maps</Text>
-            </Pressable>
-          )}
-          {customerPhone && (
-            <Pressable style={[styles.quickBtn, styles.quickBtnCall]} onPress={callCustomer}>
-              <Phone size={16} color="#FFFFFF" />
-              <Text style={styles.quickBtnText}>Llamar</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
-      {/* Delivery photo */}
-      {order.status === 'ON_THE_WAY' && (
-        <View style={styles.photoSection}>
-          {(order as any).deliveryPhoto ? (
-            <Image source={{ uri: (order as any).deliveryPhoto }} style={styles.photoThumb} />
-          ) : (
-            <Pressable style={styles.photoBtn} onPress={() => onPhoto(order.id)}>
-              <Camera size={18} color={Colors.accent} />
-              <Text style={styles.photoBtnText}>Foto de entrega</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
-      {/* Main action button */}
-      {nextAction && (
+      {/* Not my order → Claim button */}
+      {!isMyOrder && (
         <Pressable
-          style={[styles.actionBtn, { backgroundColor: nextAction.color }]}
-          onPress={handleAction}
+          style={[styles.actionBtn, { backgroundColor: Colors.accent }]}
+          onPress={handleClaim}
           disabled={updating}
         >
-          <nextAction.icon size={20} color="#FFFFFF" />
+          <Hand size={20} color="#FFFFFF" />
           <Text style={styles.actionText}>
-            {updating ? 'Actualizando...' : nextAction.label}
+            {updating ? 'Tomando...' : 'Tomar pedido'}
           </Text>
-          {!updating && <ArrowRight size={18} color="#FFFFFF" />}
         </Pressable>
+      )}
+
+      {/* My order → Quick actions + Photo + Status buttons */}
+      {isMyOrder && (
+        <>
+          {/* Quick actions: Maps + Call */}
+          {(customerAddress || customerPhone) && (
+            <View style={styles.quickActions}>
+              {customerAddress && (
+                <Pressable style={[styles.quickBtn, styles.quickBtnMaps]} onPress={openMaps}>
+                  <Navigation size={16} color="#FFFFFF" />
+                  <Text style={styles.quickBtnText}>Abrir Maps</Text>
+                </Pressable>
+              )}
+              {customerPhone && (
+                <Pressable style={[styles.quickBtn, styles.quickBtnCall]} onPress={callCustomer}>
+                  <Phone size={16} color="#FFFFFF" />
+                  <Text style={styles.quickBtnText}>Llamar</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* Photo section (ON_THE_WAY) */}
+          {isOnTheWay && (
+            <View style={styles.photoSection}>
+              {hasPhoto ? (
+                <View>
+                  <Image source={{ uri: (order as any).deliveryPhoto }} style={styles.photoThumb} />
+                  <View style={styles.photoCheck}>
+                    <CheckCircle2 size={14} color={Colors.success} />
+                    <Text style={styles.photoCheckText}>Foto tomada</Text>
+                  </View>
+                </View>
+              ) : (
+                <Pressable style={styles.photoBtn} onPress={() => onPhoto(order.id)}>
+                  <Camera size={18} color={Colors.accent} />
+                  <Text style={styles.photoBtnText}>Tomar foto de entrega</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* Action: Recogido (READY_PICKUP → ON_THE_WAY) */}
+          {isReady && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: '#8B5CF6' }]}
+              onPress={handlePickup}
+              disabled={updating}
+            >
+              <Navigation size={20} color="#FFFFFF" />
+              <Text style={styles.actionText}>
+                {updating ? 'Actualizando...' : 'Recogido · En camino'}
+              </Text>
+              <ArrowRight size={18} color="#FFFFFF" />
+            </Pressable>
+          )}
+
+          {/* Action: Entregado (ON_THE_WAY → DELIVERED, requires photo) */}
+          {isOnTheWay && (
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: hasPhoto ? Colors.success : Colors.textTertiary }]}
+              onPress={handleDelivered}
+              disabled={updating || !hasPhoto}
+            >
+              <CheckCircle2 size={20} color="#FFFFFF" />
+              <Text style={styles.actionText}>
+                {updating ? 'Actualizando...' : hasPhoto ? 'Marcar entregado' : 'Toma foto primero'}
+              </Text>
+            </Pressable>
+          )}
+        </>
       )}
     </Card>
   );
@@ -198,12 +251,12 @@ function DeliveryCard({ order, onAction, onPhoto }: { order: Order; onAction: (i
 
 // ─── Main Screen ──────────────────────────────────────────────────────
 export default function DeliveriesScreen() {
+  const { user } = useAuth();
   const { socket } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const prevCountRef = useRef(0);
-  const listRef = useRef<FlatList>(null);
   const [, setTick] = useState(0);
 
   const fetchOrders = useCallback(async () => {
@@ -213,7 +266,6 @@ export default function DeliveriesScreen() {
 
       if (list.length > prevCountRef.current && prevCountRef.current > 0) {
         Vibration.vibrate([0, 300, 100, 300]);
-        setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 300);
       }
       prevCountRef.current = list.length;
       setOrders(list);
@@ -246,7 +298,18 @@ export default function DeliveriesScreen() {
     try {
       await api.updateDeliveryStatus(orderId, status);
       await fetchOrders();
-    } catch {}
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo actualizar el estado');
+    }
+  };
+
+  const handleClaim = async (orderId: number) => {
+    try {
+      await api.claimDeliveryOrder(orderId);
+      await fetchOrders();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo tomar el pedido');
+    }
   };
 
   const handlePhoto = async (orderId: number) => {
@@ -277,11 +340,17 @@ export default function DeliveriesScreen() {
     );
   }
 
-  // Priority: READY_PICKUP first, then ON_THE_WAY, then preparing/confirmed/pending
-  const readyOrders = orders.filter(o => o.status === 'READY_PICKUP');
-  const onWayOrders = orders.filter(o => o.status === 'ON_THE_WAY');
-  const otherOrders = orders.filter(o => !['READY_PICKUP', 'ON_THE_WAY'].includes(o.status));
-  const sortedOrders = [...readyOrders, ...onWayOrders, ...otherOrders];
+  const userId = user?.id;
+  const myOrders = orders.filter(o => o.deliveryUser?.id === userId);
+  const unassigned = orders.filter(o => !o.deliveryUser);
+
+  // Build sections
+  const sections: { title: string; data: Order[] }[] = [];
+  if (myOrders.length > 0) sections.push({ title: 'Tus pedidos', data: myOrders });
+  if (unassigned.length > 0) sections.push({ title: 'Sin asignar', data: unassigned });
+
+  const myOnWay = myOrders.filter(o => o.status === 'ON_THE_WAY').length;
+  const myReady = myOrders.filter(o => o.status === 'READY_PICKUP').length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -289,30 +358,49 @@ export default function DeliveriesScreen() {
         <Truck size={22} color={Colors.accent} />
         <Text style={styles.headerTitle}>Entregas</Text>
         <View style={styles.headerBadges}>
-          {readyOrders.length > 0 && (
+          {myReady > 0 && (
             <View style={[styles.countBadge, { backgroundColor: Colors.success }]}>
-              <Text style={styles.countText}>{readyOrders.length} listos</Text>
+              <Text style={styles.countText}>{myReady} listos</Text>
             </View>
           )}
-          {onWayOrders.length > 0 && (
+          {myOnWay > 0 && (
             <View style={[styles.countBadge, { backgroundColor: '#8B5CF6' }]}>
-              <Text style={styles.countText}>{onWayOrders.length} en camino</Text>
+              <Text style={styles.countText}>{myOnWay} en camino</Text>
+            </View>
+          )}
+          {unassigned.length > 0 && (
+            <View style={[styles.countBadge, { backgroundColor: Colors.warning }]}>
+              <Text style={styles.countText}>{unassigned.length} disponibles</Text>
             </View>
           )}
         </View>
       </View>
 
-      <FlatList
-        ref={listRef}
-        data={sortedOrders}
-        keyExtractor={o => String(o.id)}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
-        ListEmptyComponent={
-          <EmptyState icon={Truck} title="Sin entregas" subtitle="No hay pedidos delivery pendientes" />
-        }
-        renderItem={({ item }) => <DeliveryCard order={item} onAction={handleAction} onPhoto={handlePhoto} />}
-      />
+      {sections.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <EmptyState icon={Truck} title="Sin entregas" subtitle="No hay pedidos listos para entregar" />
+        </View>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={o => String(o.id)}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
+          renderSectionHeader={({ section }) => (
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <DeliveryCard
+              order={item}
+              isMyOrder={item.deliveryUser?.id === userId}
+              onAction={handleAction}
+              onPhoto={handlePhoto}
+              onClaim={handleClaim}
+            />
+          )}
+          stickySectionHeadersEnabled={false}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -329,13 +417,23 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
-  headerBadges: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm },
+  headerBadges: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.xs, flexWrap: 'wrap' },
   countBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radii.pill },
   countText: { fontSize: FontSizes.xs, fontWeight: '700', color: '#FFFFFF' },
-  list: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },
+  list: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl },
 
-  card: { padding: Spacing.lg },
-  cardActive: { borderLeftWidth: 4, borderLeftColor: Colors.accent },
+  sectionTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+
+  card: { padding: Spacing.lg, marginBottom: Spacing.md },
+  cardMine: { borderLeftWidth: 4, borderLeftColor: Colors.accent },
 
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -395,14 +493,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1,
+    paddingVertical: Spacing.md,
+    borderWidth: 2,
     borderColor: Colors.accent,
     borderStyle: 'dashed',
     borderRadius: Radii.sm,
+    backgroundColor: Colors.accentLight,
   },
-  photoBtnText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.accent },
+  photoBtnText: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.accent },
   photoThumb: { width: '100%', height: 120, borderRadius: Radii.sm },
+  photoCheck: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
+  photoCheckText: { fontSize: FontSizes.xs, color: Colors.success, fontWeight: '600' },
 
   actionBtn: {
     flexDirection: 'row',

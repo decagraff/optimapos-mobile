@@ -172,6 +172,10 @@ class ApiClient {
     return res.json();
   }
 
+  async claimDeliveryOrder(orderId: number): Promise<Order> {
+    return this.patch(`/api/orders/delivery/${orderId}/claim`);
+  }
+
   async assignDeliveryUser(orderId: number, deliveryUserId: number | null): Promise<Order> {
     return this.patch(`/api/orders/delivery/${orderId}/assign`, { deliveryUserId });
   }
