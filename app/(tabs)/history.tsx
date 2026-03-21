@@ -130,11 +130,9 @@ export default function HistoryScreen() {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchOrders();
-    socket.on('order:updated', refresh);
-    socket.on('order:statusChanged', refresh);
+    socket.on('order_updated', refresh);
     return () => {
-      socket.off('order:updated', refresh);
-      socket.off('order:statusChanged', refresh);
+      socket.off('order_updated', refresh);
     };
   }, [socket, fetchOrders]);
 

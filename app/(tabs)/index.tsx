@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
@@ -395,6 +396,11 @@ export default function DashboardScreen() {
   const { isConnected } = useSocket();
   const role = user?.role || 'CLIENT';
 
+  // Redirect roles that have their own primary tab (skip dashboard)
+  if (role === 'KITCHEN') return <Redirect href="/(tabs)/kitchen" />;
+  if (role === 'DELIVERY') return <Redirect href="/(tabs)/deliveries" />;
+  if (role === 'CLIENT') return <Redirect href="/(tabs)/menu" />;
+
   const renderContent = () => {
     switch (role) {
       case 'ADMIN':
@@ -402,12 +408,6 @@ export default function DashboardScreen() {
         return <AdminDashboard locationId={selectedLocationId} />;
       case 'VENDOR':
         return <WaiterDashboard locationId={selectedLocationId} />;
-      case 'KITCHEN':
-        return <KitchenDashboard locationId={selectedLocationId} />;
-      case 'DELIVERY':
-        return <DeliveryDashboard />;
-      case 'CLIENT':
-        return <ClientHome />;
       default:
         return <AdminDashboard locationId={selectedLocationId} />;
     }

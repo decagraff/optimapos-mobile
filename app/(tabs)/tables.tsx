@@ -38,12 +38,12 @@ export default function TablesScreen() {
     if (!socket) return;
     const refresh = () => fetchTables();
     socket.on('table:updated', refresh);
-    socket.on('order:created', refresh);
-    socket.on('order:statusChanged', refresh);
+    socket.on('new_order', refresh);
+    socket.on('order_updated', refresh);
     return () => {
       socket.off('table:updated', refresh);
-      socket.off('order:created', refresh);
-      socket.off('order:statusChanged', refresh);
+      socket.off('new_order', refresh);
+      socket.off('order_updated', refresh);
     };
   }, [socket, fetchTables]);
 

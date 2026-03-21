@@ -282,13 +282,11 @@ export default function DeliveriesScreen() {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchOrders();
-    socket.on('order:created', refresh);
-    socket.on('order:updated', refresh);
-    socket.on('order:statusChanged', refresh);
+    socket.on('new_order', refresh);
+    socket.on('order_updated', refresh);
     return () => {
-      socket.off('order:created', refresh);
-      socket.off('order:updated', refresh);
-      socket.off('order:statusChanged', refresh);
+      socket.off('new_order', refresh);
+      socket.off('order_updated', refresh);
     };
   }, [socket, fetchOrders]);
 

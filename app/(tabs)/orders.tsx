@@ -144,11 +144,11 @@ export default function OrdersScreen() {
   useEffect(() => {
     if (!socket) return;
     const handleUpdate = () => { fetchOrders(); };
-    socket.on('order:updated', handleUpdate);
-    socket.on('order:statusChanged', handleUpdate);
+    socket.on('new_order', handleUpdate);
+    socket.on('order_updated', handleUpdate);
     return () => {
-      socket.off('order:updated', handleUpdate);
-      socket.off('order:statusChanged', handleUpdate);
+      socket.off('new_order', handleUpdate);
+      socket.off('order_updated', handleUpdate);
     };
   }, [socket, fetchOrders]);
 

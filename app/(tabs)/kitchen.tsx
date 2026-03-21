@@ -184,15 +184,13 @@ export default function KitchenScreen() {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchOrders();
-    socket.on('order:created', refresh);
-    socket.on('order:updated', refresh);
+    socket.on('new_order', refresh);
+    socket.on('order_updated', refresh);
     socket.on('kitchen_status_changed', refresh);
-    socket.on('order:statusChanged', refresh);
     return () => {
-      socket.off('order:created', refresh);
-      socket.off('order:updated', refresh);
+      socket.off('new_order', refresh);
+      socket.off('order_updated', refresh);
       socket.off('kitchen_status_changed', refresh);
-      socket.off('order:statusChanged', refresh);
     };
   }, [socket, fetchOrders]);
 
