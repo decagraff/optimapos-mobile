@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { TAB_CONFIG, ALL_TAB_NAMES } from '@/utils/roles';
 import { Colors } from '@/constants/theme';
@@ -6,9 +7,11 @@ import type { Role } from '@/types';
 
 export default function TabLayout() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const role: Role = (user?.role as Role) || 'CLIENT';
   const visibleTabs = TAB_CONFIG[role] || TAB_CONFIG.CLIENT;
   const visibleNames = new Set(visibleTabs.map(t => t.name));
+  const bottomPadding = Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -19,8 +22,8 @@ export default function TabLayout() {
           backgroundColor: Colors.card,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 4,
         },
         tabBarLabelStyle: {
