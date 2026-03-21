@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
 import { History, Clock, MapPin, Package, CheckCircle2, XCircle } from 'lucide-react-native';
 import { useSocket } from '@/hooks/useSocket';
+import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import { OrderListSkeleton } from '@/components/ui/Skeleton';
@@ -102,6 +103,8 @@ function HistoryCard({ order }: { order: Order }) {
 // ─── Main Screen ──────────────────────────────────────────────────────
 export default function HistoryScreen() {
   const { socket } = useSocket();
+  const { user } = useAuth();
+  const isDriver = user?.role === 'DELIVERY';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,21 +112,31 @@ export default function HistoryScreen() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const data = await api.getMyOrders();
-      const completed = (Array.isArray(data) ? data : [])
-        .filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-
-      // Filter by period
       const period = PERIOD_OPTIONS[periodIdx];
-      const cutoff = period.days === 0
-        ? new Date(todayStr()).getTime()
-        : new Date(daysAgo(period.days)).getTime();
+      const days = period.days === 0 ? 1 : period.days;
 
-      const filtered = completed.filter(o => new Date(o.updatedAt || o.createdAt).getTime() >= cutoff);
-      filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      setOrders(filtered);
+      if (isDriver) {
+        // Delivery driver: get orders they delivered
+        const data = await api.getDeliveryHistory(days);
+        const list = Array.isArray(data) ? data : [];
+        list.sort((a: Order, b: Order) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setOrders(list);
+      } else {
+        // Client/other: get orders they placed
+        const data = await api.getMyOrders();
+        const completed = (Array.isArray(data) ? data : [])
+          .filter((o: Order) => ['DELIVERED', 'CANCELLED'].includes(o.status));
+
+        const cutoff = period.days === 0
+          ? new Date(todayStr()).getTime()
+          : new Date(daysAgo(period.days)).getTime();
+
+        const filtered = completed.filter((o: Order) => new Date(o.updatedAt || o.createdAt).getTime() >= cutoff);
+        filtered.sort((a: Order, b: Order) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setOrders(filtered);
+      }
     } catch {}
-  }, [periodIdx]);
+  }, [periodIdx, isDriver]);
 
   useEffect(() => { setLoading(true); fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
 

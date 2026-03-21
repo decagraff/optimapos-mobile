@@ -149,6 +149,10 @@ class ApiClient {
     return this.patch(`/api/orders/delivery/${orderId}/status`, { status });
   }
 
+  async getDeliveryHistory(days = 30): Promise<Order[]> {
+    return this.get(`/api/orders/delivery/history?days=${days}`);
+  }
+
   async uploadDeliveryPhoto(orderId: number, uri: string): Promise<{ deliveryPhoto: string }> {
     const formData = new FormData();
     const filename = uri.split('/').pop() || 'photo.jpg';

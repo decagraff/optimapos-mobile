@@ -204,10 +204,10 @@ function DeliveryCard({
               {hasPhoto ? (
                 <View>
                   <Image source={{ uri: `${serverUrl}${(order as any).deliveryPhoto}` }} style={styles.photoThumb} />
-                  <View style={styles.photoCheck}>
-                    <CheckCircle2 size={14} color={Colors.success} />
-                    <Text style={styles.photoCheckText}>Foto tomada</Text>
-                  </View>
+                  <Pressable style={styles.retakeBtn} onPress={() => onPhoto(order.id)}>
+                    <Camera size={14} color={Colors.accent} />
+                    <Text style={styles.retakeBtnText}>Retomar foto</Text>
+                  </Pressable>
                 </View>
               ) : (
                 <Pressable style={styles.photoBtn} onPress={() => onPhoto(order.id)}>
@@ -506,8 +506,15 @@ const styles = StyleSheet.create({
   },
   photoBtnText: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.accent },
   photoThumb: { width: '100%', height: 120, borderRadius: Radii.sm },
-  photoCheck: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
-  photoCheckText: { fontSize: FontSizes.xs, color: Colors.success, fontWeight: '600' },
+  retakeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+    paddingVertical: Spacing.xs,
+  },
+  retakeBtnText: { fontSize: FontSizes.xs, color: Colors.accent, fontWeight: '600' },
 
   actionBtn: {
     flexDirection: 'row',
