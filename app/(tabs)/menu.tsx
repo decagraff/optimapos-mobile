@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
@@ -7,18 +7,21 @@ import { ShoppingCart } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
 import { useCart } from '@/hooks/useCart';
+import { useFavorites } from '@/hooks/useFavorites';
 import { api } from '@/services/api';
 import CategoryChips from '@/components/catalog/CategoryChips';
 import ProductCard from '@/components/catalog/ProductCard';
 import ProductDetail from '@/components/catalog/ProductDetail';
 import CartSheet from '@/components/order/CartSheet';
 import CheckoutModal from '@/components/order/CheckoutModal';
+import { MenuSkeleton } from '@/components/ui/Skeleton';
 import type { Product, Category, CartItem, AddonGroup } from '@/types';
 
 export default function MenuScreen() {
   const { selectedLocationId, selectedLocationName } = useAuth();
   const { config } = useServer();
   const cart = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const cartRef = useRef<BottomSheet>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -77,7 +80,7 @@ export default function MenuScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <MenuSkeleton />
       </SafeAreaView>
     );
   }
@@ -109,7 +112,13 @@ export default function MenuScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
         renderItem={({ item }) => (
           <View style={{ width: '48.5%' }}>
-            <ProductCard product={item} onPress={setSelectedProduct} baseUrl={baseUrl} />
+            <ProductCard
+              product={item}
+              onPress={setSelectedProduct}
+              baseUrl={baseUrl}
+              isFavorite={isFavorite(item.id)}
+              onToggleFavorite={toggleFavorite}
+            />
           </View>
         )}
         ListEmptyComponent={

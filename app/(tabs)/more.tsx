@@ -1,18 +1,43 @@
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, Switch, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
 import { useSocket } from '@/hooks/useSocket';
+import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { User, LogOut, Building2, MapPin, Wifi, WifiOff, RefreshCw } from 'lucide-react-native';
+import { User, LogOut, Building2, MapPin, Wifi, WifiOff, Package, ChevronDown, ChevronUp } from 'lucide-react-native';
+import type { Product } from '@/types';
 
 export default function MoreScreen() {
-  const { user, logout, selectedLocationName } = useAuth();
+  const { user, logout, selectedLocationId, selectedLocationName } = useAuth();
   const { config, disconnect } = useServer();
   const { isConnected } = useSocket();
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const [products, setProducts] = useState<Product[]>([]);
+  const [showProducts, setShowProducts] = useState(false);
+
+  const fetchProducts = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const data = await api.get<Product[]>(`/api/products/all?locationId=${selectedLocationId || ''}`);
+      setProducts(Array.isArray(data) ? data : []);
+    } catch {}
+  }, [isAdmin, selectedLocationId]);
+
+  useEffect(() => { if (showProducts) fetchProducts(); }, [showProducts, fetchProducts]);
+
+  const handleToggleProduct = async (product: Product) => {
+    try {
+      await api.toggleProduct(product.id, !product.isActive);
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isActive: !p.isActive } : p));
+    } catch {
+      Alert.alert('Error', 'No se pudo cambiar el estado');
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
@@ -89,6 +114,40 @@ export default function MoreScreen() {
         </View>
       </Card>
 
+      {/* Quick Product Toggle (Admin/Manager only) */}
+      {isAdmin && (
+        <View>
+          <Pressable style={styles.toggleSection} onPress={() => setShowProducts(!showProducts)}>
+            <Package size={18} color={Colors.accent} />
+            <Text style={styles.toggleSectionTitle}>Productos</Text>
+            {showProducts ? <ChevronUp size={18} color={Colors.textTertiary} /> : <ChevronDown size={18} color={Colors.textTertiary} />}
+          </Pressable>
+          {showProducts && (
+            <Card style={styles.productList}>
+              {products.length === 0 && (
+                <Text style={styles.emptyProducts}>Sin productos</Text>
+              )}
+              {products.map(product => (
+                <View key={product.id} style={styles.productRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.productName, !product.isActive && styles.productInactive]}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.productPrice}>S/ {Number(product.price).toFixed(2)}</Text>
+                  </View>
+                  <Switch
+                    value={product.isActive}
+                    onValueChange={() => handleToggleProduct(product)}
+                    trackColor={{ false: Colors.border, true: Colors.success + '60' }}
+                    thumbColor={product.isActive ? Colors.success : Colors.textTertiary}
+                  />
+                </View>
+              ))}
+            </Card>
+          )}
+        </View>
+      )}
+
       {/* Actions */}
       <View style={styles.actions}>
         {user?.role !== 'CLIENT' && (
@@ -131,5 +190,25 @@ const styles = StyleSheet.create({
   infoLabel: { flex: 1, fontSize: FontSizes.md, color: Colors.textSecondary },
   infoValue: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
   divider: { height: 1, backgroundColor: Colors.borderLight },
+  toggleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+  },
+  toggleSectionTitle: { flex: 1, fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text },
+  productList: { gap: 0, padding: 0 },
+  emptyProducts: { padding: Spacing.lg, fontSize: FontSizes.sm, color: Colors.textTertiary, textAlign: 'center' },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  productName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
+  productInactive: { color: Colors.textTertiary, textDecorationLine: 'line-through' },
+  productPrice: { fontSize: FontSizes.xs, color: Colors.textSecondary, marginTop: 2 },
   actions: { gap: Spacing.md },
 });

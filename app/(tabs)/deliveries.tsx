@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, RefreshControl,
-  ActivityIndicator, Vibration, Linking,
+  Vibration, Linking, Image, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
 import {
   Truck, Clock, MapPin, Phone, ArrowRight, Package, Navigation,
-  CheckCircle2, User,
+  CheckCircle2, User, Camera,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
@@ -56,7 +58,7 @@ function getCustomerAddress(order: Order): string | null {
 }
 
 // ─── Delivery Card ────────────────────────────────────────────────────
-function DeliveryCard({ order, onAction }: { order: Order; onAction: (id: number, status: string) => void }) {
+function DeliveryCard({ order, onAction, onPhoto }: { order: Order; onAction: (id: number, status: string) => void; onPhoto: (id: number) => void }) {
   const [updating, setUpdating] = useState(false);
   const mins = minutesSince(order.createdAt);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
@@ -162,6 +164,20 @@ function DeliveryCard({ order, onAction }: { order: Order; onAction: (id: number
         </View>
       )}
 
+      {/* Delivery photo */}
+      {order.status === 'ON_THE_WAY' && (
+        <View style={styles.photoSection}>
+          {(order as any).deliveryPhoto ? (
+            <Image source={{ uri: (order as any).deliveryPhoto }} style={styles.photoThumb} />
+          ) : (
+            <Pressable style={styles.photoBtn} onPress={() => onPhoto(order.id)}>
+              <Camera size={18} color={Colors.accent} />
+              <Text style={styles.photoBtnText}>Foto de entrega</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {/* Main action button */}
       {nextAction && (
         <Pressable
@@ -233,10 +249,30 @@ export default function DeliveriesScreen() {
     } catch {}
   };
 
+  const handlePhoto = async (orderId: number) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso requerido', 'Se necesita acceso a la cámara para tomar foto de entrega');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    try {
+      await api.uploadDeliveryPhoto(orderId, result.assets[0].uri);
+      await fetchOrders();
+    } catch {
+      Alert.alert('Error', 'No se pudo subir la foto');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <OrderListSkeleton />
       </SafeAreaView>
     );
   }
@@ -275,7 +311,7 @@ export default function DeliveriesScreen() {
         ListEmptyComponent={
           <EmptyState icon={Truck} title="Sin entregas" subtitle="No hay pedidos delivery pendientes" />
         }
-        renderItem={({ item }) => <DeliveryCard order={item} onAction={handleAction} />}
+        renderItem={({ item }) => <DeliveryCard order={item} onAction={handleAction} onPhoto={handlePhoto} />}
       />
     </SafeAreaView>
   );
@@ -352,6 +388,21 @@ const styles = StyleSheet.create({
   quickBtnMaps: { backgroundColor: '#3B82F6' },
   quickBtnCall: { backgroundColor: Colors.success },
   quickBtnText: { fontSize: FontSizes.sm, fontWeight: '700', color: '#FFFFFF' },
+
+  photoSection: { marginTop: Spacing.md },
+  photoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderStyle: 'dashed',
+    borderRadius: Radii.sm,
+  },
+  photoBtnText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.accent },
+  photoThumb: { width: '100%', height: 120, borderRadius: Radii.sm },
 
   actionBtn: {
     flexDirection: 'row',

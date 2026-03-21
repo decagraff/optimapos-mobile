@@ -1,16 +1,18 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Colors, Spacing, FontSizes, Radii, Shadows } from '@/constants/theme';
-import { ShoppingCart, AlertCircle } from 'lucide-react-native';
+import { ShoppingCart, AlertCircle, Heart } from 'lucide-react-native';
 import type { Product } from '@/types';
 
 interface Props {
   product: Product;
   onPress: (product: Product) => void;
   baseUrl: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: (productId: number) => void;
 }
 
-export default function ProductCard({ product, onPress, baseUrl }: Props) {
+export default function ProductCard({ product, onPress, baseUrl, isFavorite, onToggleFavorite }: Props) {
   const price = Number(product.price) || 0;
   const promo = product.promoPrice != null ? Number(product.promoPrice) : null;
   const outOfStock = product.stockEnabled && (product.stockCurrent ?? 0) <= 0;
@@ -60,6 +62,20 @@ export default function ProductCard({ product, onPress, baseUrl }: Props) {
           <AlertCircle size={10} color={Colors.danger} />
           <Text style={styles.stockText}>Agotado</Text>
         </View>
+      )}
+
+      {onToggleFavorite && (
+        <Pressable
+          style={styles.favBtn}
+          onPress={(e) => { e.stopPropagation?.(); onToggleFavorite(product.id); }}
+          hitSlop={8}
+        >
+          <Heart
+            size={18}
+            color={isFavorite ? Colors.danger : Colors.textTertiary}
+            fill={isFavorite ? Colors.danger : 'none'}
+          />
+        </Pressable>
       )}
     </Pressable>
   );
@@ -135,5 +151,16 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: Colors.danger,
+  },
+  favBtn: {
+    position: 'absolute',
+    top: Spacing.sm,
+    left: Spacing.sm,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

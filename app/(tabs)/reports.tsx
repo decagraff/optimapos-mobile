@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, Pressable,
+  View, Text, StyleSheet, ScrollView, RefreshControl, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
@@ -8,6 +8,7 @@ import {
   BarChart3, DollarSign, ShoppingCart, TrendingUp, XCircle,
   ArrowUp, ArrowDown, Minus, Calendar,
 } from 'lucide-react-native';
+import { ReportsSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
@@ -194,7 +195,7 @@ export default function ReportsScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />
+        <ReportsSkeleton />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scroll}

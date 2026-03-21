@@ -1,10 +1,11 @@
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/theme';
+import { DashboardSkeleton } from './Skeleton';
 
 export default function LoadingScreen() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={Colors.accent} />
+      <DashboardSkeleton />
     </View>
   );
 }
@@ -12,8 +13,6 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: Colors.background,
   },
 });

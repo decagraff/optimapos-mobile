@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
@@ -7,6 +7,7 @@ import { api } from '@/services/api';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import { DashboardSkeleton, CashSkeleton, OrderListSkeleton } from '@/components/ui/Skeleton';
 import {
   TrendingUp, ShoppingCart, DollarSign, XCircle,
   ClipboardList, Clock, ChefHat, Truck, CheckCircle2,
@@ -70,7 +71,7 @@ function AdminDashboard({ locationId }: { locationId: number | null }) {
 
   const fmt = (n: number) => `S/ ${(Number(n) || 0).toFixed(2)}`;
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <ScrollView
@@ -110,7 +111,7 @@ function WaiterDashboard({ locationId }: { locationId: number | null }) {
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
   const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false); };
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <DashboardSkeleton />;
 
   const activeOrders = orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status));
   const freeTables = tables.filter(t => t.status === 'FREE' || t.status === 'AVAILABLE');
@@ -164,7 +165,7 @@ function KitchenDashboard({ locationId }: { locationId: number | null }) {
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
   const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false); };
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <DashboardSkeleton cards={3} />;
 
   const pending = orders.filter(o => o.status === 'PENDING' || o.status === 'CONFIRMED');
   const preparing = orders.filter(o => o.status === 'PREPARING');
@@ -215,7 +216,7 @@ function CashierDashboard() {
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
   const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false); };
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <CashSkeleton />;
 
   const isOpen = cashSession && !cashSession.closedAt;
   const fmt = (n: number) => `S/ ${(n || 0).toFixed(2)}`;
@@ -268,7 +269,7 @@ function DeliveryDashboard() {
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
   const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false); };
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <DashboardSkeleton cards={2} />;
 
   const pending = orders.filter(o => o.status !== 'DELIVERED');
   const delivered = orders.filter(o => o.status === 'DELIVERED');
@@ -319,7 +320,7 @@ function ClientHome() {
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
   const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false); };
 
-  if (loading) return <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />;
+  if (loading) return <OrderListSkeleton count={3} />;
 
   const activeOrders = orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status));
   const recentOrders = orders.slice(0, 5);

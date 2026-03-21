@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ActivityIndicator, Vibration } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Vibration, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { ChefHat, Clock, AlertTriangle, CheckCircle2, Flame } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import { KitchenSkeleton } from '@/components/ui/Skeleton';
 
 // ─── Types ────────────────────────────────────────────────────────────
 interface KitchenItem {
@@ -145,6 +146,8 @@ function KitchenCard({ order, onAction }: { order: KitchenOrder; onAction: (id: 
 export default function KitchenScreen() {
   const { selectedLocationId } = useAuth();
   const { socket } = useSocket();
+  const { width: screenWidth } = useWindowDimensions();
+  const isWide = screenWidth >= 600; // tablet or landscape
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -205,13 +208,28 @@ export default function KitchenScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <KitchenSkeleton />
       </SafeAreaView>
     );
   }
 
-  const pending = orders.filter(o => o.kitchenStatus === 'PENDING');
-  const preparing = orders.filter(o => o.kitchenStatus === 'PREPARING');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+
+  // Extract unique categories from order items
+  const categorySet = new Map<string, string>();
+  orders.forEach(o => o.items.forEach(item => {
+    const cat = item.product?.category;
+    if (cat?.name) categorySet.set(cat.name, cat.name);
+  }));
+  const categoryNames = Array.from(categorySet.values()).sort();
+
+  // Filter orders: show only orders that have at least one item in the selected category
+  const filteredOrders = filterCategory
+    ? orders.filter(o => o.items.some(item => item.product?.category?.name === filterCategory))
+    : orders;
+
+  const pending = filteredOrders.filter(o => o.kitchenStatus === 'PENDING');
+  const preparing = filteredOrders.filter(o => o.kitchenStatus === 'PREPARING');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -233,16 +251,47 @@ export default function KitchenScreen() {
         </View>
       </View>
 
+      {/* Category filter chips */}
+      {categoryNames.length > 0 && (
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={[null, ...categoryNames]}
+          keyExtractor={(item) => item || 'all'}
+          contentContainerStyle={styles.filterRow}
+          renderItem={({ item: cat }) => {
+            const active = cat === filterCategory;
+            return (
+              <Pressable
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setFilterCategory(cat)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                  {cat || 'Todo'}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+      )}
+
       <FlatList
         ref={listRef}
-        data={orders}
+        data={filteredOrders}
         keyExtractor={o => String(o.id)}
+        key={isWide ? 'wide' : 'narrow'}
+        numColumns={isWide ? 2 : 1}
+        columnWrapperStyle={isWide ? styles.wideRow : undefined}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
         ListEmptyComponent={
           <EmptyState icon={ChefHat} title="Sin pedidos" subtitle="No hay pedidos pendientes en cocina" />
         }
-        renderItem={({ item }) => <KitchenCard order={item} onAction={handleAction} />}
+        renderItem={({ item }) => (
+          <View style={isWide ? styles.wideCard : undefined}>
+            <KitchenCard order={item} onAction={handleAction} />
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -263,7 +312,21 @@ const styles = StyleSheet.create({
   headerBadges: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm },
   countBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radii.pill },
   countText: { fontSize: FontSizes.xs, fontWeight: '700', color: '#FFFFFF' },
+  filterRow: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm, gap: Spacing.sm },
+  filterChip: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterChipText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
+  filterChipTextActive: { color: '#FFFFFF' },
   list: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },
+  wideRow: { justifyContent: 'space-between' },
+  wideCard: { width: '49%' },
 
   card: { padding: Spacing.lg },
   cardUrgent: { borderLeftWidth: 4, borderLeftColor: Colors.danger },

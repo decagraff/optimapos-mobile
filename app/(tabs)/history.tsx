@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Pressable,
+  View, Text, StyleSheet, FlatList, RefreshControl, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
@@ -8,6 +8,7 @@ import { History, Clock, MapPin, Package, CheckCircle2, XCircle } from 'lucide-r
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Order, OrderStatus } from '@/types';
@@ -179,7 +180,7 @@ export default function HistoryScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />
+        <OrderListSkeleton />
       ) : (
         <FlatList
           data={orders}

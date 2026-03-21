@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
 import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import type { Order, OrderStatus } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -167,7 +168,7 @@ export default function OrdersScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <OrderListSkeleton />
       </SafeAreaView>
     );
   }

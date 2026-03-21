@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, TableStatusColors } from '@/constants/theme';
 import { Grid3X3, Users } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
+import { TablesSkeleton } from '@/components/ui/Skeleton';
 import type { Table } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -51,7 +52,7 @@ export default function TablesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <TablesSkeleton />
       </SafeAreaView>
     );
   }

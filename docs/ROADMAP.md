@@ -137,17 +137,17 @@
 - [x] Lista "Mis pedidos" con estado en vivo (Socket.io)
 - [x] Pull-to-refresh en listas
 - [x] Mesas: grid visual con colores por estado + resumen
-- [ ] Skeleton loaders durante carga (pendiente — usa ActivityIndicator)
+- [x] Skeleton loaders durante carga (shimmer effect en todas las pantallas)
 
 ### Fase 2.5 — Módulo Cocina ✅
 - [x] Lista de pedidos entrantes en tiempo real (Socket.io)
 - [x] Card de pedido: items con cantidad, notas, variantes, addons
 - [x] Botón "Preparando" y "Listo" por pedido
-- [ ] Filtro por categoría (todo / bebidas / platos / postres)
+- [x] Filtro por categoría (chips dinámicos desde items del pedido)
 - [x] Timer visible por pedido (minutos desde que entró)
 - [x] Sonido + vibración al llegar nuevo pedido
 - [x] Auto-scroll al nuevo pedido
-- [ ] Vista adaptable: vertical (celular) y horizontal (tablet)
+- [x] Vista adaptable: vertical (celular) y 2 columnas (tablet/landscape ≥600px)
 - [x] Indicador visual de pedidos urgentes (> X minutos)
 
 ### Fase 3 — Módulo Delivery ✅
@@ -155,7 +155,7 @@
 - [x] Detalle de pedido: items + dirección + teléfono cliente
 - [x] Botón "Abrir en Maps / Waze" con dirección
 - [x] Cambio de estado con botón principal grande
-- [ ] Foto de entrega (cámara del dispositivo)
+- [x] Foto de entrega (cámara del dispositivo + upload al backend)
 - [x] Historial de entregas del día
 - [ ] Notificación push de nuevo pedido asignado
 - [ ] Badge de pedidos pendientes en tab
@@ -168,11 +168,11 @@
   - [ ] Código de descuento (requiere backend)
 - [x] Tracking en tiempo real (Socket.io) — via pantalla de pedidos
 - [x] Mis pedidos con detalle expandible
-  - [ ] Botón "Repetir" (requiere backend)
-- [ ] Favoritos (requiere backend UserFavorite)
+  - [x] Botón "Repetir" (backend + mobile)
+- [x] Favoritos (backend UserFavorite + heart en ProductCard)
 - [x] Perfil del cliente: datos + últimos pedidos + cambiar local
-  - [ ] Direcciones guardadas (requiere backend UserAddress)
-  - [ ] Cambiar contraseña (requiere backend)
+  - [x] Direcciones guardadas (backend UserAddress + UI en perfil)
+  - [x] Cambiar contraseña (backend + UI en perfil)
 - [ ] Pedir como invitado (requiere backend POST /api/orders/guest)
 
 ### Fase 4 — Módulo Manager / Dashboard ✅
@@ -183,7 +183,7 @@
 - [x] Caja: abrir/cerrar, movimientos entrada/salida, resumen en vivo
 - [x] Pull-to-refresh en reportes y caja
 - [x] Estado de mesas en vivo (ya en tab Mesas de waiter/admin)
-- [ ] Toggle rápido de productos (activar/desactivar)
+- [x] Toggle rápido de productos (activar/desactivar en "Más")
 
 ### Fase 4.5 — Módulo Admin (multi-local, parcial)
 - [x] Selector de local (pantalla dedicada + botón en "Más")
@@ -610,12 +610,12 @@ Estos cambios se hacen en el repo principal `optimapos` (backend + frontend web)
 - [x] Endpoints públicos de mesas (`GET /api/tables/public`, `GET /api/tables/public/:id`)
 - [ ] Endpoint: pedido como invitado (`POST /api/orders/guest`) — sin auth, solo nombre+teléfono
 - [ ] Endpoint: generar PDF con todos los QR de un local
-- [ ] Modelo: `UserAddress` — direcciones guardadas del cliente
-- [ ] Modelo: `UserFavorite` — productos favoritos del cliente
-- [ ] Endpoint: CRUD direcciones del cliente (`/api/user/addresses`)
-- [ ] Endpoint: CRUD favoritos del cliente (`/api/user/favorites`)
-- [ ] Endpoint: historial de pedidos del cliente (`/api/user/orders`)
-- [ ] Endpoint: repetir pedido (`POST /api/orders/repeat/:orderId`)
+- [x] Modelo: `UserAddress` — direcciones guardadas del cliente
+- [x] Modelo: `UserFavorite` — productos favoritos del cliente
+- [x] Endpoint: CRUD direcciones del cliente (`/api/users/me/addresses`)
+- [x] Endpoint: CRUD favoritos del cliente (`/api/users/me/favorites`)
+- [x] Endpoint: historial de pedidos del cliente (`/api/orders/my`)
+- [x] Endpoint: repetir pedido (`POST /api/orders/repeat/:orderId`)
 - [ ] Endpoint: registro de device token para push (`POST /api/user/device-token`)
 - [ ] Endpoint: `GET /api/app/version` — control de versión mínima y force update
 - [ ] Firebase Admin SDK para enviar push notifications

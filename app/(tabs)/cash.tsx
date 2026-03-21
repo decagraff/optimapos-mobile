@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, RefreshControl,
   Alert, TextInput, Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import {
   Wallet, DollarSign, ArrowDownCircle, ArrowUpCircle,
   Lock, Unlock, Clock, Plus, Minus, X,
 } from 'lucide-react-native';
+import { CashSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
@@ -165,7 +166,7 @@ export default function CashScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 60 }} />
+        <CashSkeleton />
       </SafeAreaView>
     );
   }
