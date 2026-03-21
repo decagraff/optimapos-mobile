@@ -13,6 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
+import { useContext } from 'react';
+import { ServerContext } from '@/context/ServerContext';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -49,13 +51,14 @@ function getCustomerAddress(order: Order): string | null {
 
 // ─── Delivery Card ────────────────────────────────────────────────────
 function DeliveryCard({
-  order, onAction, onPhoto, onClaim, isMyOrder,
+  order, onAction, onPhoto, onClaim, isMyOrder, serverUrl,
 }: {
   order: Order;
   onAction: (id: number, status: string) => void;
   onPhoto: (id: number) => void;
   onClaim: (id: number) => void;
   isMyOrder: boolean;
+  serverUrl: string;
 }) {
   const [updating, setUpdating] = useState(false);
   const mins = minutesSince(order.createdAt);
@@ -200,7 +203,7 @@ function DeliveryCard({
             <View style={styles.photoSection}>
               {hasPhoto ? (
                 <View>
-                  <Image source={{ uri: (order as any).deliveryPhoto }} style={styles.photoThumb} />
+                  <Image source={{ uri: `${serverUrl}${(order as any).deliveryPhoto}` }} style={styles.photoThumb} />
                   <View style={styles.photoCheck}>
                     <CheckCircle2 size={14} color={Colors.success} />
                     <Text style={styles.photoCheckText}>Foto tomada</Text>
@@ -253,6 +256,8 @@ function DeliveryCard({
 export default function DeliveriesScreen() {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const { config } = useContext(ServerContext);
+  const serverUrl = config?.baseUrl || '';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -394,6 +399,7 @@ export default function DeliveriesScreen() {
               onAction={handleAction}
               onPhoto={handlePhoto}
               onClaim={handleClaim}
+              serverUrl={serverUrl}
             />
           )}
           stickySectionHeadersEnabled={false}
