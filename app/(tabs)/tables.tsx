@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   summaryNum: { fontSize: FontSizes.xxl, fontWeight: '700' },
   summaryLabel: { fontSize: FontSizes.xs, color: Colors.textSecondary },
-  gridRow: { gap: Spacing.sm },
+  gridRow: { gap: Spacing.sm, justifyContent: 'flex-start' },
   grid: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.xxxxl },
   tableCell: {
     flex: 1,

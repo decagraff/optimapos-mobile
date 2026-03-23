@@ -205,7 +205,7 @@ export default function OrdersScreen() {
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 12 } : undefined}>
               {section.data.map(order => (
-                <View key={order.id} style={isTablet ? { width: '49%' } : undefined}>
+                <View key={order.id} style={isTablet ? { flexBasis: '48%', flexGrow: 0 } : undefined}>
                   <OrderCard order={order} onStatusChange={handleStatusChange} userRole={userRole} />
                 </View>
               ))}

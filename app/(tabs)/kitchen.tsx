@@ -323,8 +323,8 @@ const styles = StyleSheet.create({
   filterChipText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
   filterChipTextActive: { color: '#FFFFFF' },
   list: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },
-  wideRow: { justifyContent: 'space-between' },
-  wideCard: { width: '49%' },
+  wideRow: { gap: Spacing.md },
+  wideCard: { flex: 1 },
 
   card: { padding: Spacing.lg },
   cardUrgent: { borderLeftWidth: 4, borderLeftColor: Colors.danger },

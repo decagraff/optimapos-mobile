@@ -110,23 +110,20 @@ export default function MenuScreen() {
         keyExtractor={p => String(p.id)}
         key={`products-${productColumns}`}
         numColumns={productColumns}
-        columnWrapperStyle={styles.row}
+        columnWrapperStyle={{ gap: Spacing.md }}
         contentContainerStyle={[styles.grid, { paddingHorizontal: contentPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
-        renderItem={({ item }) => {
-          const itemWidth = `${Math.floor(100 / productColumns) - 2}%` as any;
-          return (
-            <View style={{ width: itemWidth }}>
-              <ProductCard
-                product={item}
-                onPress={setSelectedProduct}
-                baseUrl={baseUrl}
-                isFavorite={isFavorite(item.id)}
-                onToggleFavorite={toggleFavorite}
-              />
-            </View>
-          );
-        }}
+        renderItem={({ item }) => (
+          <View style={{ flex: 1, maxWidth: `${100 / productColumns}%` }}>
+            <ProductCard
+              product={item}
+              onPress={setSelectedProduct}
+              baseUrl={baseUrl}
+              isFavorite={isFavorite(item.id)}
+              onToggleFavorite={toggleFavorite}
+            />
+          </View>
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No hay productos disponibles</Text>
@@ -187,7 +184,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
   headerSub: { fontSize: FontSizes.xs, color: Colors.textTertiary, marginTop: 2 },
-  row: { justifyContent: 'space-between' },
+  row: { gap: Spacing.md },
   grid: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 100 },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { fontSize: FontSizes.md, color: Colors.textTertiary },
