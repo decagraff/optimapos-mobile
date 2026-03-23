@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Vibration, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, Pressable, RefreshControl, Vibration, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { ChefHat, Clock, AlertTriangle, CheckCircle2, Flame } from 'lucide-react-native';
@@ -251,16 +251,17 @@ export default function KitchenScreen() {
 
       {/* Category filter chips */}
       {categoryNames.length > 0 && (
-        <FlatList
+        <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={[null, ...categoryNames]}
-          keyExtractor={(item) => item || 'all'}
+          style={styles.filterScroll}
           contentContainerStyle={styles.filterRow}
-          renderItem={({ item: cat }) => {
+        >
+          {[null, ...categoryNames].map(cat => {
             const active = cat === filterCategory;
             return (
               <Pressable
+                key={cat || 'all'}
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setFilterCategory(cat)}
               >
@@ -269,8 +270,8 @@ export default function KitchenScreen() {
                 </Text>
               </Pressable>
             );
-          }}
-        />
+          })}
+        </ScrollView>
       )}
 
       <FlatList
@@ -310,7 +311,8 @@ const styles = StyleSheet.create({
   headerBadges: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm },
   countBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radii.pill },
   countText: { fontSize: FontSizes.xs, fontWeight: '700', color: '#FFFFFF' },
-  filterRow: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm, gap: Spacing.sm },
+  filterScroll: { maxHeight: 52, minHeight: 52 },
+  filterRow: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm, alignItems: 'center' as const, height: 52 },
   filterChip: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
@@ -318,7 +320,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.border,
-    alignSelf: 'center' as const,
+    height: 36,
+    justifyContent: 'center' as const,
   },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   filterChipText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
