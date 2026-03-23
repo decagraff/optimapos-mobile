@@ -203,6 +203,8 @@ export default function KitchenScreen() {
     } catch {}
   };
 
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -210,8 +212,6 @@ export default function KitchenScreen() {
       </SafeAreaView>
     );
   }
-
-  const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
   // Extract unique categories from order items
   const categorySet = new Map<string, string>();
