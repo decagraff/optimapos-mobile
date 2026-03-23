@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
-  scroll: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: Spacing.xxxxl },
+  scroll: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: Spacing.xxxxl, maxWidth: 900, alignSelf: 'center' as const, width: '100%' },
 
   closedCard: { alignItems: 'center', gap: Spacing.lg, paddingVertical: Spacing.xxxl },
   closedTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.text },
@@ -467,6 +467,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
+    maxWidth: 500,
     backgroundColor: Colors.card,
     borderRadius: Radii.md,
     padding: Spacing.xl,

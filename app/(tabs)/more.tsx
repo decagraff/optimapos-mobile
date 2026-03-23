@@ -162,7 +162,7 @@ export default function MoreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: Spacing.xxxxl },
+  scroll: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: Spacing.xxxxl, maxWidth: 700, alignSelf: 'center' as const, width: '100%' },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',

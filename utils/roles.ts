@@ -55,3 +55,36 @@ export const ALL_TAB_NAMES = [
   'cash', 'menu', 'tables', 'kitchen',
   'deliveries', 'history', 'profile',
 ];
+
+// Default route per role (first tab the user should see)
+export const DEFAULT_ROUTE: Record<Role, string> = {
+  ADMIN: '/(tabs)',
+  MANAGER: '/(tabs)',
+  VENDOR: '/(tabs)/pos',
+  KITCHEN: '/(tabs)/kitchen',
+  DELIVERY: '/(tabs)/deliveries',
+  CLIENT: '/(tabs)/menu',
+};
+
+// Allowed order status transitions per role (frontend enforcement)
+export const ALLOWED_TRANSITIONS: Record<Role, Record<string, { status: string; label: string } | null>> = {
+  ADMIN: {
+    PENDING: { status: 'CONFIRMED', label: 'Confirmar' },
+    CONFIRMED: { status: 'PREPARING', label: 'Preparando' },
+    PREPARING: { status: 'READY_PICKUP', label: 'Listo' },
+    READY_PICKUP: { status: 'DELIVERED', label: 'Entregado' },
+  },
+  MANAGER: {
+    PENDING: { status: 'CONFIRMED', label: 'Confirmar' },
+    CONFIRMED: { status: 'PREPARING', label: 'Preparando' },
+    PREPARING: { status: 'READY_PICKUP', label: 'Listo' },
+    READY_PICKUP: { status: 'DELIVERED', label: 'Entregado' },
+  },
+  VENDOR: {
+    PENDING: { status: 'CONFIRMED', label: 'Confirmar' },
+    READY_PICKUP: { status: 'DELIVERED', label: 'Entregado' },
+  },
+  KITCHEN: {},
+  DELIVERY: {},
+  CLIENT: {},
+};

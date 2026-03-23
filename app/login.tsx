@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
 import { api } from '@/services/api';
+import { DEFAULT_ROUTE } from '@/utils/roles';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
+import type { Role } from '@/types';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { LogIn } from 'lucide-react-native';
@@ -39,7 +41,8 @@ export default function LoginScreen() {
         }
       } catch {}
 
-      router.replace('/(tabs)');
+      const role = (user.role as Role) || 'CLIENT';
+      router.replace(DEFAULT_ROUTE[role] || '/(tabs)');
     } catch (e: any) {
       setError(e.message || 'Error al iniciar sesión');
     } finally {

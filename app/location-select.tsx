@@ -7,7 +7,8 @@ import { Colors, Spacing, FontSizes, Radii, Shadows } from '@/constants/theme';
 import Card from '@/components/ui/Card';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { MapPin, Building2, Check } from 'lucide-react-native';
-import type { Location } from '@/types';
+import { DEFAULT_ROUTE } from '@/utils/roles';
+import type { Location, Role } from '@/types';
 
 export default function LocationSelectScreen() {
   const { user, selectLocation } = useAuth();
@@ -30,7 +31,8 @@ export default function LocationSelectScreen() {
   const handleSelect = async (loc: Location) => {
     setSelected(loc.id);
     await selectLocation(loc.id, loc.name);
-    router.replace('/(tabs)');
+    const role = (user?.role as Role) || 'CLIENT';
+    router.replace(DEFAULT_ROUTE[role] || '/(tabs)');
   };
 
   if (loading) return <LoadingScreen />;

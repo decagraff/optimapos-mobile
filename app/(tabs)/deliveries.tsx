@@ -19,6 +19,7 @@ import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { Order, OrderStatus } from '@/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -257,6 +258,7 @@ export default function DeliveriesScreen() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { config } = useContext(ServerContext);
+  const { isTablet } = useResponsive();
   const serverUrl = config?.baseUrl || '';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -424,7 +426,7 @@ const styles = StyleSheet.create({
   headerBadges: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.xs, flexWrap: 'wrap' },
   countBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radii.pill },
   countText: { fontSize: FontSizes.xs, fontWeight: '700', color: '#FFFFFF' },
-  list: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl },
+  list: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl, maxWidth: 900, alignSelf: 'center' as const, width: '100%' },
 
   sectionTitle: {
     fontSize: FontSizes.sm,

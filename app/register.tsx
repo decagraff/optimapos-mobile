@@ -40,7 +40,7 @@ export default function RegisterScreen() {
 
     try {
       await register({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password });
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/menu');
     } catch (e: any) {
       setError(e.message || 'Error al crear cuenta');
     } finally {

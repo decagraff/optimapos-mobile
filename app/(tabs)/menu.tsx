@@ -15,6 +15,7 @@ import ProductDetail from '@/components/catalog/ProductDetail';
 import CartSheet from '@/components/order/CartSheet';
 import CheckoutModal from '@/components/order/CheckoutModal';
 import { MenuSkeleton } from '@/components/ui/Skeleton';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { Product, Category, CartItem, AddonGroup } from '@/types';
 
 export default function MenuScreen() {
@@ -23,6 +24,7 @@ export default function MenuScreen() {
   const cart = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const cartRef = useRef<BottomSheet>(null);
+  const { productColumns, isTablet, contentPadding } = useResponsive();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -106,21 +108,25 @@ export default function MenuScreen() {
       <FlatList
         data={filteredProducts}
         keyExtractor={p => String(p.id)}
-        numColumns={2}
+        key={`products-${productColumns}`}
+        numColumns={productColumns}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={[styles.grid, { paddingHorizontal: contentPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
-        renderItem={({ item }) => (
-          <View style={{ width: '48.5%' }}>
-            <ProductCard
-              product={item}
-              onPress={setSelectedProduct}
-              baseUrl={baseUrl}
-              isFavorite={isFavorite(item.id)}
-              onToggleFavorite={toggleFavorite}
-            />
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const itemWidth = `${Math.floor(100 / productColumns) - 2}%` as any;
+          return (
+            <View style={{ width: itemWidth }}>
+              <ProductCard
+                product={item}
+                onPress={setSelectedProduct}
+                baseUrl={baseUrl}
+                isFavorite={isFavorite(item.id)}
+                onToggleFavorite={toggleFavorite}
+              />
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No hay productos disponibles</Text>

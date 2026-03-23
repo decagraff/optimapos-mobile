@@ -14,6 +14,7 @@ import {
   ClipboardList, Clock, ChefHat, Truck, CheckCircle2,
   UtensilsCrossed, Grid3X3, Wallet,
 } from 'lucide-react-native';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface Summary {
@@ -41,9 +42,9 @@ interface DeliveryOrder {
 }
 
 // ─── Stat Card ───────────────────────────────────────────────────────
-function StatCard({ icon, value, label, color }: { icon: React.ReactNode; value: string | number; label: string; color: string }) {
+function StatCard({ icon, value, label, color, isTablet }: { icon: React.ReactNode; value: string | number; label: string; color: string; isTablet?: boolean }) {
   return (
-    <Card style={styles.statCard}>
+    <Card style={[styles.statCard, isTablet && { width: '23%' as any }]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
         {icon}
       </View>
@@ -54,7 +55,7 @@ function StatCard({ icon, value, label, color }: { icon: React.ReactNode; value:
 }
 
 // ─── Admin / Manager Dashboard ───────────────────────────────────────
-function AdminDashboard({ locationId }: { locationId: number | null }) {
+function AdminDashboard({ locationId, isTablet }: { locationId: number | null; isTablet?: boolean }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,10 +82,10 @@ function AdminDashboard({ locationId }: { locationId: number | null }) {
     >
       <Text style={styles.sectionTitle}>Resumen del día</Text>
       <View style={styles.statsGrid}>
-        <StatCard icon={<DollarSign size={18} color={Colors.success} />} value={summary ? fmt(summary.totalSales) : 'S/ 0.00'} label="Ventas" color={Colors.success} />
-        <StatCard icon={<ShoppingCart size={18} color={Colors.accent} />} value={summary?.totalOrders ?? 0} label="Pedidos" color={Colors.accent} />
-        <StatCard icon={<TrendingUp size={18} color={Colors.info} />} value={summary ? fmt(summary.avgTicket) : 'S/ 0.00'} label="Ticket prom." color={Colors.info} />
-        <StatCard icon={<XCircle size={18} color={Colors.danger} />} value={summary?.cancelledOrders ?? 0} label="Cancelados" color={Colors.danger} />
+        <StatCard isTablet={isTablet} icon={<DollarSign size={18} color={Colors.success} />} value={summary ? fmt(summary.totalSales) : 'S/ 0.00'} label="Ventas" color={Colors.success} />
+        <StatCard isTablet={isTablet} icon={<ShoppingCart size={18} color={Colors.accent} />} value={summary?.totalOrders ?? 0} label="Pedidos" color={Colors.accent} />
+        <StatCard isTablet={isTablet} icon={<TrendingUp size={18} color={Colors.info} />} value={summary ? fmt(summary.avgTicket) : 'S/ 0.00'} label="Ticket prom." color={Colors.info} />
+        <StatCard isTablet={isTablet} icon={<XCircle size={18} color={Colors.danger} />} value={summary?.cancelledOrders ?? 0} label="Cancelados" color={Colors.danger} />
       </View>
     </ScrollView>
   );
@@ -394,6 +395,7 @@ function minutesAgo(dateStr: string): string {
 export default function DashboardScreen() {
   const { user, selectedLocationId, selectedLocationName } = useAuth();
   const { isConnected } = useSocket();
+  const { isTablet, contentMaxWidth } = useResponsive();
   const role = user?.role || 'CLIENT';
 
   // Redirect roles that have their own primary tab (skip dashboard)
@@ -405,7 +407,7 @@ export default function DashboardScreen() {
     switch (role) {
       case 'ADMIN':
       case 'MANAGER':
-        return <AdminDashboard locationId={selectedLocationId} />;
+        return <AdminDashboard locationId={selectedLocationId} isTablet={isTablet} />;
       case 'VENDOR':
         return <WaiterDashboard locationId={selectedLocationId} />;
       default:
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
   dotOnline: { backgroundColor: Colors.success },
   dotOffline: { backgroundColor: Colors.textTertiary },
   statusText: { fontSize: FontSizes.xs, color: Colors.textSecondary },
-  scroll: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl },
+  scroll: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl, maxWidth: 900, alignSelf: 'center' as const, width: '100%' },
   sectionTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.md },
   statsGrid: {
     flexDirection: 'row',

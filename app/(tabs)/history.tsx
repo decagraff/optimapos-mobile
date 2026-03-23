@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.accent },
   statLabel: { fontSize: FontSizes.xs, color: Colors.textSecondary, marginTop: 2 },
 
-  list: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.xxxxl },
+  list: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.xxxxl, maxWidth: 900, alignSelf: 'center' as const, width: '100%' },
 
   card: { padding: Spacing.md },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

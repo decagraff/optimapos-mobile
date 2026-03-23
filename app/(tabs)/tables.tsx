@@ -9,6 +9,7 @@ import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
 import { TablesSkeleton } from '@/components/ui/Skeleton';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { Table } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -21,6 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function TablesScreen() {
   const { selectedLocationId } = useAuth();
   const { socket } = useSocket();
+  const { tableColumns } = useResponsive();
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +88,8 @@ export default function TablesScreen() {
       <FlatList
         data={tables}
         keyExtractor={t => String(t.id)}
-        numColumns={3}
+        key={`tables-${tableColumns}`}
+        numColumns={tableColumns}
         columnWrapperStyle={styles.gridRow}
         contentContainerStyle={styles.grid}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}

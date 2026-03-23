@@ -12,6 +12,7 @@ import { ReportsSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // ─── Types ────────────────────────────────────────────────────────────
 interface Summary {
@@ -132,6 +133,7 @@ function SimpleBar({ label, value, maxValue, color }: { label: string; value: nu
 // ─── Main Screen ──────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const { selectedLocationId } = useAuth();
+  const { isTablet } = useResponsive();
   const [periodIdx, setPeriodIdx] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -254,8 +256,8 @@ export default function ReportsScreen() {
           {byType.length > 0 && (
             <Card style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Por tipo</Text>
-              {byType.map(t => (
-                <View key={t.type} style={styles.typeRow}>
+              {byType.map((t, idx) => (
+                <View key={`${t.type}-${idx}`} style={styles.typeRow}>
                   <Text style={styles.typeLabel}>{TYPE_LABELS[t.type] || t.type}</Text>
                   <Text style={styles.typeCount}>{t.count} pedidos</Text>
                   <Text style={styles.typeTotal}>{fmt(Number(t.total))}</Text>
@@ -268,8 +270,8 @@ export default function ReportsScreen() {
           {byPayment.length > 0 && (
             <Card style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Por método de pago</Text>
-              {byPayment.map(p => (
-                <View key={p.paymentMethod} style={styles.typeRow}>
+              {byPayment.map((p, idx) => (
+                <View key={`${p.paymentMethod}-${idx}`} style={styles.typeRow}>
                   <Text style={styles.typeLabel}>{PAYMENT_LABELS[p.paymentMethod] || p.paymentMethod}</Text>
                   <Text style={styles.typeCount}>{p.count} pedidos</Text>
                   <Text style={styles.typeTotal}>{fmt(Number(p.total))}</Text>
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
   periodText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
   periodTextActive: { color: '#FFFFFF' },
 
-  scroll: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl, gap: Spacing.lg },
+  scroll: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl, gap: Spacing.lg, maxWidth: 900, alignSelf: 'center' as const, width: '100%' },
 
   statsGrid: {
     flexDirection: 'row',
@@ -325,7 +327,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   statCard: {
-    width: '47%' as any,
+    flex: 1,
+    minWidth: '45%' as any,
     alignItems: 'center',
     paddingVertical: Spacing.xl,
     gap: Spacing.xs,

@@ -11,7 +11,9 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { OrderListSkeleton } from '@/components/ui/Skeleton';
-import type { Order, OrderStatus } from '@/types';
+import type { Order, OrderStatus, Role } from '@/types';
+import { ALLOWED_TRANSITIONS } from '@/utils/roles';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
@@ -38,20 +40,24 @@ function timeAgo(dateStr: string): string {
   return `${hrs}h ${mins % 60}m`;
 }
 
-// Status flow: what's the next status for each current status
-const NEXT_STATUS: Record<string, { status: string; label: string; color: string } | null> = {
-  PENDING:   { status: 'CONFIRMED',  label: 'Confirmar',    color: Colors.info },
-  CONFIRMED: { status: 'PREPARING',  label: 'Preparando',   color: Colors.accent },
-  PREPARING: { status: 'READY_PICKUP', label: 'Listo',        color: Colors.success },
-  READY_PICKUP: { status: 'DELIVERED', label: 'Entregado',    color: Colors.success },
+// Color map for status action buttons
+const STATUS_ACTION_COLORS: Record<string, string> = {
+  CONFIRMED: Colors.info,
+  PREPARING: Colors.accent,
+  READY_PICKUP: Colors.success,
+  DELIVERED: Colors.success,
 };
 
-function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; onStatusChange: (id: number, status: string) => void; canChangeStatus: boolean }) {
+function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatusChange: (id: number, status: string) => void; userRole: Role }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
   const isActive = !['DELIVERED', 'CANCELLED'].includes(order.status);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
-  const nextAction = isActive ? NEXT_STATUS[order.status] : null;
+
+  // Role-aware: get allowed transition for this role + current status
+  const roleTransitions = ALLOWED_TRANSITIONS[userRole] || {};
+  const transition = isActive ? (roleTransitions[order.status] || null) : null;
+  const nextAction = transition ? { ...transition, color: STATUS_ACTION_COLORS[transition.status] || Colors.info } : null;
 
   const handleStatusChange = async () => {
     if (!nextAction) return;
@@ -106,8 +112,8 @@ function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; o
         )}
       </Pressable>
 
-      {/* Status action button — only for staff roles */}
-      {canChangeStatus && nextAction && (
+      {/* Status action button — role-aware */}
+      {nextAction && (
         <Pressable
           style={[styles.statusBtn, { backgroundColor: nextAction.color }]}
           onPress={handleStatusChange}
@@ -121,15 +127,14 @@ function OrderCard({ order, onStatusChange, canChangeStatus }: { order: Order; o
   );
 }
 
-const STAFF_ROLES = ['ADMIN', 'MANAGER', 'VENDOR', 'KITCHEN'];
-
 export default function OrdersScreen() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { socket } = useSocket();
-  const canChangeStatus = STAFF_ROLES.includes(user?.role || '');
+  const { isTablet } = useResponsive();
+  const userRole: Role = (user?.role as Role) || 'CLIENT';
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -198,9 +203,13 @@ export default function OrdersScreen() {
         renderItem={({ item: section }) => (
           <View>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.data.map(order => (
-              <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} canChangeStatus={canChangeStatus} />
-            ))}
+            <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 12 } : undefined}>
+              {section.data.map(order => (
+                <View key={order.id} style={isTablet ? { width: '49%' } : undefined}>
+                  <OrderCard order={order} onStatusChange={handleStatusChange} userRole={userRole} />
+                </View>
+              ))}
+            </View>
           </View>
         )}
       />

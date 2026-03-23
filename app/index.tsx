@@ -6,6 +6,8 @@ import { useServer } from '@/hooks/useServer';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, FontSizes, Spacing } from '@/constants/theme';
 import { api } from '@/services/api';
+import { DEFAULT_ROUTE } from '@/utils/roles';
+import type { Role } from '@/types';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,7 +53,8 @@ export default function SplashRouter() {
         }
       } catch {}
 
-      router.replace('/(tabs)');
+      const role = (user?.role as Role) || 'CLIENT';
+      router.replace(DEFAULT_ROUTE[role] || '/(tabs)');
     })();
   }, [serverLoading, authLoading, isConfigured, isAuthenticated, user]);
 
