@@ -318,6 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.border,
+    alignSelf: 'center' as const,
   },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   filterChipText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
