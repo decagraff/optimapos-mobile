@@ -123,6 +123,18 @@ class ApiClient {
     return res.orders || [];
   }
 
+  async getOrders(params?: { from?: string; to?: string; status?: string; type?: string; search?: string; locationId?: number; limit?: number }): Promise<{ data: Order[]; meta: any; stats: any }> {
+    const q = new URLSearchParams();
+    if (params?.from) q.set('from', params.from);
+    if (params?.to) q.set('to', params.to);
+    if (params?.status) q.set('status', params.status);
+    if (params?.type) q.set('type', params.type);
+    if (params?.search) q.set('search', params.search);
+    if (params?.locationId) q.set('locationId', String(params.locationId));
+    q.set('limit', String(params?.limit || 100));
+    return this.get(`/api/orders?${q}`);
+  }
+
   async createOrder(data: any): Promise<{ order: Order; whatsappLink?: string }> {
     return this.post('/api/orders', data);
   }

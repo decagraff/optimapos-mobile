@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Pressable } from 'react-native';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Pressable, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
-import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native';
+import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight, Search, X, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
@@ -15,11 +15,10 @@ import type { Order, OrderStatus, Role } from '@/types';
 import { ALLOWED_TRANSITIONS } from '@/utils/roles';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ORDER_STATUS_LABELS, TYPE_LABELS } from '@/constants/labels';
-import { timeAgo } from '@/utils/helpers';
+import { timeAgo, todayStr, daysAgo, fmt } from '@/utils/helpers';
 
 const STATUS_LABELS = ORDER_STATUS_LABELS;
 
-// Color map for status action buttons
 const STATUS_ACTION_COLORS: Record<string, string> = {
   CONFIRMED: Colors.info,
   PREPARING: Colors.accent,
@@ -27,13 +26,33 @@ const STATUS_ACTION_COLORS: Record<string, string> = {
   DELIVERED: Colors.success,
 };
 
+type DatePreset = 'today' | 'yesterday' | 'week';
+
+const DATE_PRESETS: { key: DatePreset; label: string }[] = [
+  { key: 'today', label: 'Hoy' },
+  { key: 'yesterday', label: 'Ayer' },
+  { key: 'week', label: '7 días' },
+];
+
+function getPresetDates(preset: DatePreset): { from: string; to: string } {
+  const today = todayStr();
+  switch (preset) {
+    case 'today': return { from: today, to: today };
+    case 'yesterday': return { from: daysAgo(1), to: daysAgo(1) };
+    case 'week': return { from: daysAgo(6), to: today };
+  }
+}
+
+const STATUS_FILTERS = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_PICKUP', 'ON_THE_WAY', 'DELIVERED', 'CANCELLED'];
+const TYPE_FILTERS = ['DINE_IN', 'PICKUP', 'DELIVERY'];
+
+// ─── Order Card ────────────────────────────────────────────────────────
 function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatusChange: (id: number, status: string) => void; userRole: Role }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
   const isActive = !['DELIVERED', 'CANCELLED'].includes(order.status);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
 
-  // Role-aware: get allowed transition for this role + current status
   const roleTransitions = ALLOWED_TRANSITIONS[userRole] || {};
   const transition = isActive ? (roleTransitions[order.status] || null) : null;
   const nextAction = transition ? { ...transition, color: STATUS_ACTION_COLORS[transition.status] || Colors.info } : null;
@@ -61,6 +80,9 @@ function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatus
               <Text style={styles.orderTimeText}>{timeAgo(order.createdAt)}</Text>
             </View>
           </View>
+          {order.guestName || order.user?.name ? (
+            <Text style={styles.customerName}>{order.guestName || order.user?.name}</Text>
+          ) : null}
         </View>
 
         <View style={styles.orderFooter}>
@@ -91,7 +113,6 @@ function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatus
         )}
       </Pressable>
 
-      {/* Status action button — role-aware */}
       {nextAction && (
         <Pressable
           style={[styles.statusBtn, { backgroundColor: nextAction.color }]}
@@ -106,28 +127,56 @@ function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatus
   );
 }
 
+// ─── Main Screen ─────────────────────────────────────────────────────
 export default function OrdersScreen() {
-  const { user } = useAuth();
+  const { user, selectedLocationId } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { socket } = useSocket();
   const { isTablet } = useResponsive();
   const userRole: Role = (user?.role as Role) || 'CLIENT';
+  const isStaff = ['ADMIN', 'MANAGER', 'VENDOR'].includes(userRole);
+
+  // Filters
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
 
   const fetchOrders = useCallback(async () => {
     try {
-      const data = await api.getMyOrders();
-      setOrders(data);
-    } catch (err) { console.warn('[Orders] Failed:', err); }
-  }, []);
+      if (isStaff) {
+        const dates = getPresetDates(datePreset);
+        const res = await api.getOrders({
+          from: dates.from,
+          to: dates.to,
+          status: statusFilter || undefined,
+          type: typeFilter || undefined,
+          search: search || undefined,
+          locationId: selectedLocationId || undefined,
+          limit: 100,
+        });
+        setOrders(res.data || []);
+        if (res.stats) {
+          setTodayRevenue(res.stats.todayRevenue || 0);
+          setTodayCount(res.stats.todayCount || 0);
+        }
+      } else {
+        // CLIENT: only their own orders
+        const data = await api.getMyOrders();
+        setOrders(data);
+      }
+    } catch (err) { console.warn('[Orders] Fetch failed:', err); }
+  }, [isStaff, datePreset, statusFilter, typeFilter, search, selectedLocationId]);
 
   useEffect(() => { fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
 
-  // Listen for real-time order updates
   useEffect(() => {
     if (!socket) return;
-    const handleUpdate = () => { fetchOrders(); };
+    const handleUpdate = () => fetchOrders();
     socket.on('new_order', handleUpdate);
     socket.on('order_updated', handleUpdate);
     return () => {
@@ -146,8 +195,18 @@ export default function OrdersScreen() {
     try {
       await api.updateOrderStatus(orderId, status);
       await fetchOrders();
-    } catch (err) { console.warn('[Orders] Failed:', err); }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo actualizar el estado');
+    }
   };
+
+  // Client-side grouping
+  const active = useMemo(() => orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status)), [orders]);
+  const completed = useMemo(() => orders.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status)), [orders]);
+  const sections = [
+    ...(active.length > 0 ? [{ title: `Activos (${active.length})`, data: active }] : []),
+    ...(completed.length > 0 ? [{ title: `Completados (${completed.length})`, data: completed }] : []),
+  ];
 
   if (loading) {
     return (
@@ -157,19 +216,96 @@ export default function OrdersScreen() {
     );
   }
 
-  const active = orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status));
-  const completed = orders.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-  const sections = [
-    ...(active.length > 0 ? [{ title: 'Activos', data: active }] : []),
-    ...(completed.length > 0 ? [{ title: 'Completados', data: completed }] : []),
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <ClipboardList size={22} color={Colors.accent} />
-        <Text style={styles.headerTitle}>Mis pedidos</Text>
+        <Text style={styles.headerTitle}>{isStaff ? 'Pedidos' : 'Mis pedidos'}</Text>
+        {isStaff && (
+          <Text style={styles.headerStats}>
+            {fmt(todayRevenue)} ({todayCount})
+          </Text>
+        )}
       </View>
+
+      {/* Filters — only for staff */}
+      {isStaff && (
+        <View style={styles.filtersContainer}>
+          {/* Date presets */}
+          <View style={styles.filterRow}>
+            <Calendar size={14} color={Colors.textTertiary} />
+            {DATE_PRESETS.map(p => (
+              <Pressable
+                key={p.key}
+                style={[styles.filterChip, datePreset === p.key && styles.filterChipActive]}
+                onPress={() => setDatePreset(p.key)}
+              >
+                <Text style={[styles.filterChipText, datePreset === p.key && styles.filterChipTextActive]}>{p.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchRow}>
+            <Search size={14} color={Colors.textTertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar código, nombre, mesa..."
+              placeholderTextColor={Colors.textTertiary}
+              value={search}
+              onChangeText={setSearch}
+              onSubmitEditing={() => fetchOrders()}
+              returnKeyType="search"
+            />
+            {search ? (
+              <Pressable onPress={() => { setSearch(''); }}>
+                <X size={14} color={Colors.textTertiary} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {/* Status chips */}
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, !statusFilter && styles.filterChipActive]}
+              onPress={() => setStatusFilter('')}
+            >
+              <Text style={[styles.filterChipText, !statusFilter && styles.filterChipTextActive]}>Todos</Text>
+            </Pressable>
+            {STATUS_FILTERS.map(s => (
+              <Pressable
+                key={s}
+                style={[styles.filterChip, statusFilter === s && styles.filterChipActive]}
+                onPress={() => setStatusFilter(statusFilter === s ? '' : s)}
+              >
+                <View style={[styles.filterDot, { backgroundColor: OrderStatusColors[s as OrderStatus] || Colors.textTertiary }]} />
+                <Text style={[styles.filterChipText, statusFilter === s && styles.filterChipTextActive]}>
+                  {STATUS_LABELS[s]?.substring(0, 6) || s}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Type chips */}
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, !typeFilter && styles.filterChipActive]}
+              onPress={() => setTypeFilter('')}
+            >
+              <Text style={[styles.filterChipText, !typeFilter && styles.filterChipTextActive]}>Todos</Text>
+            </Pressable>
+            {TYPE_FILTERS.map(t => (
+              <Pressable
+                key={t}
+                style={[styles.filterChip, typeFilter === t && styles.filterChipActive]}
+                onPress={() => setTypeFilter(typeFilter === t ? '' : t)}
+              >
+                <Text style={[styles.filterChipText, typeFilter === t && styles.filterChipTextActive]}>{TYPE_LABELS[t]}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
 
       <FlatList
         data={sections}
@@ -177,7 +313,7 @@ export default function OrdersScreen() {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
         ListEmptyComponent={
-          <EmptyState icon={ClipboardList} title="Sin pedidos" subtitle="Los pedidos que hagas aparecerán aquí" />
+          <EmptyState icon={ClipboardList} title="Sin pedidos" subtitle={isStaff ? 'No hay pedidos con estos filtros' : 'Los pedidos que hagas aparecerán aquí'} />
         }
         renderItem={({ item: section }) => (
           <View>
@@ -206,7 +342,64 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
-  headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text },
+  headerTitle: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.text, flex: 1 },
+  headerStats: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.accent },
+  filtersContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  filterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    borderRadius: Radii.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+    paddingVertical: 0,
+  },
   list: { padding: Spacing.lg, paddingBottom: Spacing.xxxxl },
   sectionTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.lg, marginBottom: Spacing.md },
   orderCard: { marginBottom: Spacing.md, padding: Spacing.lg },
@@ -219,6 +412,7 @@ const styles = StyleSheet.create({
   orderTable: { fontSize: FontSizes.xs, color: Colors.textSecondary },
   orderTime: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: Spacing.sm },
   orderTimeText: { fontSize: FontSizes.xs, color: Colors.textTertiary },
+  customerName: { fontSize: FontSizes.xs, color: Colors.textSecondary, fontWeight: '500' },
   orderFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md },
   orderTotal: { fontSize: FontSizes.lg, fontWeight: '700', color: Colors.accent },
   orderItems: { flexDirection: 'row', alignItems: 'center', gap: 4 },
