@@ -14,31 +14,10 @@ import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import type { Order, OrderStatus, Role } from '@/types';
 import { ALLOWED_TRANSITIONS } from '@/utils/roles';
 import { useResponsive } from '@/hooks/useResponsive';
+import { ORDER_STATUS_LABELS, TYPE_LABELS } from '@/constants/labels';
+import { timeAgo } from '@/utils/helpers';
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendiente',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Preparando',
-  READY_PICKUP: 'Listo',
-  ON_THE_WAY: 'En camino',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  DINE_IN: 'En mesa',
-  PICKUP: 'Para llevar',
-  TAKEAWAY: 'Para llevar',
-  DELIVERY: 'Delivery',
-};
-
-function timeAgo(dateStr: string): string {
-  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m`;
-}
+const STATUS_LABELS = ORDER_STATUS_LABELS;
 
 // Color map for status action buttons
 const STATUS_ACTION_COLORS: Record<string, string> = {
@@ -140,7 +119,7 @@ export default function OrdersScreen() {
     try {
       const data = await api.getMyOrders();
       setOrders(data);
-    } catch {}
+    } catch (err) { console.warn('[Orders] Failed:', err); }
   }, []);
 
   useEffect(() => { fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
@@ -167,7 +146,7 @@ export default function OrdersScreen() {
     try {
       await api.updateOrderStatus(orderId, status);
       await fetchOrders();
-    } catch {}
+    } catch (err) { console.warn('[Orders] Failed:', err); }
   };
 
   if (loading) {

@@ -14,37 +14,11 @@ import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Order, OrderStatus } from '@/types';
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-};
-
-function getCustomerName(order: Order): string {
-  return order.guestName || order.user?.name || 'Cliente';
-}
-
-function getAddress(order: Order): string | null {
-  return order.guestAddress || order.user?.address || null;
-}
-
-function todayStr(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
-}
+// ─── Helpers (centralized) ────────────────────────────────────────────
+import { formatTime, formatDate, todayStr, daysAgo, getCustomerName, getCustomerAddress } from '@/utils/helpers';
+import { ORDER_STATUS_LABELS } from '@/constants/labels';
+const STATUS_LABELS = ORDER_STATUS_LABELS;
+const getAddress = getCustomerAddress;
 
 const PERIOD_OPTIONS = [
   { label: 'Hoy', days: 0 },
@@ -135,7 +109,7 @@ export default function HistoryScreen() {
         filtered.sort((a: Order, b: Order) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         setOrders(filtered);
       }
-    } catch {}
+    } catch (err) { console.warn('[History] Failed:', err); }
   }, [periodIdx, isDriver]);
 
   useEffect(() => { setLoading(true); fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);

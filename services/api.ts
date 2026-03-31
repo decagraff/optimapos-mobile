@@ -55,7 +55,7 @@ class ApiClient {
       try {
         const err = await res.json();
         msg = err.error || msg;
-      } catch {}
+      } catch (err) { console.warn("[API] Parse failed:", err); }
       throw new ApiError(msg, res.status);
     }
 

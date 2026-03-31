@@ -53,21 +53,9 @@ interface CashRegister {
   summary?: CashSummary;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function fmt(n: number): string {
-  return `S/ ${(Number(n) || 0).toFixed(2)}`;
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-}
-
-const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'Efectivo',
-  YAPE: 'Yape',
-  TRANSFER: 'Transferencia',
-  IZIPAY: 'Izipay',
-};
+// ─── Helpers (centralized) ────────────────────────────────────────────
+import { fmt, formatTime } from '@/utils/helpers';
+import { PAYMENT_LABELS } from '@/constants/labels';
 
 // ─── Main Screen ──────────────────────────────────────────────────────
 export default function CashScreen() {
@@ -88,7 +76,8 @@ export default function CashScreen() {
       const q = selectedLocationId ? `?locationId=${selectedLocationId}` : '';
       const data = await api.get<CashRegister | null>(`/api/cash/current${q}`);
       setRegister(data);
-    } catch {
+    } catch (err) {
+      console.warn('[Cash] Fetch failed:', err);
       setRegister(null);
     }
   }, [selectedLocationId]);
@@ -209,29 +198,29 @@ export default function CashScreen() {
                 <Text style={styles.summaryTitle}>Resumen</Text>
                 <View style={styles.timeRow}>
                   <Clock size={12} color={Colors.textTertiary} />
-                  <Text style={styles.timeText}>Desde {formatTime(register!.openedAt)}</Text>
+                  <Text style={styles.timeText}>Desde {formatTime(register?.openedAt)}</Text>
                 </View>
               </View>
 
               <View style={styles.summaryGrid}>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryLabel}>Apertura</Text>
-                  <Text style={styles.summaryValue}>{fmt(Number(register!.openingAmount))}</Text>
+                  <Text style={styles.summaryValue}>{fmt(Number(register?.openingAmount))}</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryLabel}>Ventas efectivo</Text>
-                  <Text style={styles.summaryValue}>{fmt(Number(register!.summary?.cashSales || 0))}</Text>
+                  <Text style={styles.summaryValue}>{fmt(Number(register?.summary?.cashSales || 0))}</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryLabel}>Entradas</Text>
                   <Text style={[styles.summaryValue, { color: Colors.success }]}>
-                    +{fmt(Number(register!.summary?.totalMovementsIn || 0))}
+                    +{fmt(Number(register?.summary?.totalMovementsIn || 0))}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryLabel}>Salidas</Text>
                   <Text style={[styles.summaryValue, { color: Colors.danger }]}>
-                    -{fmt(Number(register!.summary?.totalMovementsOut || 0))}
+                    -{fmt(Number(register?.summary?.totalMovementsOut || 0))}
                   </Text>
                 </View>
               </View>
@@ -239,16 +228,16 @@ export default function CashScreen() {
               <View style={styles.expectedRow}>
                 <Text style={styles.expectedLabel}>Esperado en caja</Text>
                 <Text style={styles.expectedValue}>
-                  {fmt(Number(register!.summary?.expectedAmount || register!.expectedAmount || 0))}
+                  {fmt(Number(register?.summary?.expectedAmount || register?.expectedAmount || 0))}
                 </Text>
               </View>
             </Card>
 
             {/* Payment breakdown */}
-            {register!.summary?.byPaymentMethod && register!.summary.byPaymentMethod.length > 0 && (
+            {register?.summary?.byPaymentMethod && register?.summary.byPaymentMethod.length > 0 && (
               <Card style={styles.paymentCard}>
                 <Text style={styles.sectionTitle}>Ventas por método</Text>
-                {register!.summary.byPaymentMethod.map(pm => (
+                {register?.summary.byPaymentMethod.map(pm => (
                   <View key={pm.method} style={styles.paymentRow}>
                     <Text style={styles.paymentLabel}>{PAYMENT_LABELS[pm.method] || pm.method}</Text>
                     <Text style={styles.paymentCount}>{pm.count} pedidos</Text>
@@ -259,10 +248,10 @@ export default function CashScreen() {
             )}
 
             {/* Recent movements */}
-            {register!.movements && register!.movements.length > 0 && (
+            {register?.movements && register?.movements.length > 0 && (
               <Card style={styles.movementsCard}>
                 <Text style={styles.sectionTitle}>Movimientos</Text>
-                {register!.movements.map(m => (
+                {register?.movements.map(m => (
                   <View key={m.id} style={styles.movementRow}>
                     {m.type === 'IN' ? (
                       <ArrowDownCircle size={18} color={Colors.success} />

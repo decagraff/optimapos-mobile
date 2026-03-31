@@ -42,7 +42,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
           api.configure(cfg.baseUrl, cfg.tenantHost);
           setConfig(cfg);
         }
-      } catch {}
+      } catch (err) { console.warn("[Server] Load config failed:", err); }
       setIsLoading(false);
     })();
   }, []);

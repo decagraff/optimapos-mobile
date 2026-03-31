@@ -33,27 +33,9 @@ interface KitchenOrder {
   items: KitchenItem[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function minutesSince(dateStr: string): number {
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-}
-
-function timerColor(mins: number): string {
-  if (mins < 5) return Colors.success;
-  if (mins < 10) return Colors.warning;
-  return Colors.danger;
-}
-
-function timerLabel(mins: number): string {
-  if (mins < 1) return 'Ahora';
-  return `${mins} min`;
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  DINE_IN: 'Mesa',
-  PICKUP: 'Para llevar',
-  DELIVERY: 'Delivery',
-};
+// ─── Helpers (centralized) ────────────────────────────────────────────
+import { minutesSince, timerLabel, timerColor } from '@/utils/helpers';
+import { TYPE_LABELS } from '@/constants/labels';
 
 // ─── Kitchen Card ─────────────────────────────────────────────────────
 function KitchenCard({ order, onAction }: { order: KitchenOrder; onAction: (id: number, status: string) => void }) {
@@ -169,7 +151,7 @@ export default function KitchenScreen() {
       }
       prevCountRef.current = list.length;
       setOrders(list);
-    } catch {}
+    } catch (err) { console.warn('[Kitchen] Failed:', err); }
   }, [selectedLocationId]);
 
   useEffect(() => { fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);
@@ -200,7 +182,7 @@ export default function KitchenScreen() {
     try {
       await api.updateKitchenStatus(orderId, status);
       await fetchOrders();
-    } catch {}
+    } catch (err) { console.warn('[Kitchen] Failed:', err); }
   };
 
   const [filterCategory, setFilterCategory] = useState<string | null>(null);

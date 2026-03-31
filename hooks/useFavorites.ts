@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '@/services/api';
 import { useAuth } from './useAuth';
 
@@ -20,6 +20,8 @@ export function useFavorites() {
   const isClient = user?.role === 'CLIENT';
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
+  const favIdsRef = useRef(favoriteIds);
+  favIdsRef.current = favoriteIds;
 
   const fetchFavorites = useCallback(async () => {
     if (!isClient) return;
@@ -28,14 +30,16 @@ export function useFavorites() {
       const list = Array.isArray(data) ? data : [];
       setFavorites(list);
       setFavoriteIds(new Set(list.map((f: FavoriteEntry) => f.productId)));
-    } catch {}
+    } catch (err) {
+      console.warn('[Favorites] Fetch failed:', err);
+    }
   }, [isClient]);
 
   useEffect(() => { fetchFavorites(); }, [fetchFavorites]);
 
   const toggleFavorite = useCallback(async (productId: number) => {
     if (!isClient) return;
-    const isFav = favoriteIds.has(productId);
+    const isFav = favIdsRef.current.has(productId);
     // Optimistic update
     setFavoriteIds(prev => {
       const next = new Set(prev);
@@ -50,7 +54,8 @@ export function useFavorites() {
         await api.addFavorite(productId);
       }
       fetchFavorites();
-    } catch {
+    } catch (err) {
+      console.warn('[Favorites] Toggle failed:', err);
       // Revert on error
       setFavoriteIds(prev => {
         const next = new Set(prev);
@@ -59,7 +64,7 @@ export function useFavorites() {
         return next;
       });
     }
-  }, [isClient, favoriteIds, fetchFavorites]);
+  }, [isClient, fetchFavorites]);
 
   return { favoriteIds, favorites, toggleFavorite, isFavorite: (id: number) => favoriteIds.has(id) };
 }

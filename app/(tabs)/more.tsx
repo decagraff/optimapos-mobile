@@ -25,7 +25,7 @@ export default function MoreScreen() {
     try {
       const data = await api.get<Product[]>(`/api/products/all?locationId=${selectedLocationId || ''}`);
       setProducts(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch (err) { console.warn("[More] Failed:", err); }
   }, [isAdmin, selectedLocationId]);
 
   useEffect(() => { if (showProducts) fetchProducts(); }, [showProducts, fetchProducts]);

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
+import { fmt } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { DashboardSkeleton, CashSkeleton, OrderListSkeleton } from '@/components/ui/Skeleton';
@@ -65,13 +66,13 @@ function AdminDashboard({ locationId, isTablet }: { locationId: number | null; i
       const locParam = locationId ? `&locationId=${locationId}` : '';
       const data = await api.get<Summary>(`/api/reports/summary?${locParam}`);
       setSummary(data);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, [locationId]);
 
   useEffect(() => { fetch().finally(() => setLoading(false)); }, [fetch]);
   const onRefresh = async () => { setRefreshing(true); await fetch(); setRefreshing(false); };
 
-  const fmt = (n: number) => `S/ ${(Number(n) || 0).toFixed(2)}`;
+  // fmt imported from @/utils/helpers
 
   if (loading) return <DashboardSkeleton />;
 
@@ -107,7 +108,7 @@ function WaiterDashboard({ locationId }: { locationId: number | null }) {
       ]);
       setOrders(ordRes.orders || []);
       setTables(Array.isArray(tabRes) ? tabRes : []);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, [locationId]);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
@@ -161,7 +162,7 @@ function KitchenDashboard({ locationId }: { locationId: number | null }) {
       const locParam = locationId ? `?locationId=${locationId}` : '';
       const data = await api.get<KitchenOrder[]>(`/api/orders/kitchen/active${locParam}`);
       setOrders(data);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, [locationId]);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
@@ -212,7 +213,7 @@ function CashierDashboard() {
     try {
       const data = await api.get<any>('/api/cash/current');
       setCashSession(data);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, []);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
@@ -221,7 +222,7 @@ function CashierDashboard() {
   if (loading) return <CashSkeleton />;
 
   const isOpen = cashSession && !cashSession.closedAt;
-  const fmt = (n: number) => `S/ ${(n || 0).toFixed(2)}`;
+  // fmt imported from @/utils/helpers
 
   return (
     <ScrollView
@@ -265,7 +266,7 @@ function DeliveryDashboard() {
     try {
       const data = await api.get<DeliveryOrder[]>('/api/orders/delivery/active');
       setOrders(data);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, []);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);
@@ -316,7 +317,7 @@ function ClientHome() {
     try {
       const data = await api.get<{ orders: any[] }>('/api/orders/my');
       setOrders(data.orders || []);
-    } catch {}
+    } catch (err) { console.warn("[Dashboard] Failed:", err); }
   }, []);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);

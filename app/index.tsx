@@ -51,7 +51,7 @@ export default function SplashRouter() {
             return;
           }
         }
-      } catch {}
+      } catch (err) { console.warn("[Router] Failed:", err); }
 
       const role = (user?.role as Role) || 'CLIENT';
       router.replace(DEFAULT_ROUTE[role] || '/(tabs)');

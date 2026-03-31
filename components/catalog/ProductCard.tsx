@@ -67,8 +67,9 @@ export default function ProductCard({ product, onPress, baseUrl, isFavorite, onT
       {onToggleFavorite && (
         <Pressable
           style={styles.favBtn}
-          onPress={(e) => { e.stopPropagation?.(); onToggleFavorite(product.id); }}
+          onPress={() => onToggleFavorite(product.id)}
           hitSlop={8}
+          onStartShouldSetResponder={() => true}
         >
           <Heart
             size={18}

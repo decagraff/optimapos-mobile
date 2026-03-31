@@ -22,33 +22,10 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { Order, OrderStatus } from '@/types';
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function minutesSince(dateStr: string): number {
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-}
-
-function timerLabel(mins: number): string {
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m`;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  READY_PICKUP: 'Listo para recoger',
-  ON_THE_WAY: 'En camino',
-  DELIVERED: 'Entregado',
-};
-
-function getCustomerName(order: Order): string {
-  return order.guestName || order.user?.name || 'Cliente';
-}
-function getCustomerPhone(order: Order): string | null {
-  return order.guestPhone || order.user?.phone || null;
-}
-function getCustomerAddress(order: Order): string | null {
-  return order.guestAddress || order.user?.address || null;
-}
+// ─── Helpers (centralized) ────────────────────────────────────────────
+import { minutesSince, timerLabel, getCustomerName, getCustomerPhone, getCustomerAddress } from '@/utils/helpers';
+import { DELIVERY_STATUS_LABELS } from '@/constants/labels';
+const STATUS_LABELS = DELIVERY_STATUS_LABELS;
 
 // ─── Delivery Card ────────────────────────────────────────────────────
 function DeliveryCard({
@@ -276,7 +253,7 @@ export default function DeliveriesScreen() {
       }
       prevCountRef.current = list.length;
       setOrders(list);
-    } catch {}
+    } catch (err) { console.warn('[Delivery] Failed:', err); }
   }, []);
 
   useEffect(() => { fetchOrders().finally(() => setLoading(false)); }, [fetchOrders]);

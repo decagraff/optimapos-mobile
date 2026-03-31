@@ -14,15 +14,8 @@ import {
 } from 'lucide-react-native';
 import type { Order } from '@/types';
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendiente',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Preparando',
-  READY_PICKUP: 'Listo',
-  ON_THE_WAY: 'En camino',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-};
+import { ORDER_STATUS_LABELS } from '@/constants/labels';
+const STATUS_LABELS = ORDER_STATUS_LABELS;
 
 interface UserAddress {
   id: number;
@@ -56,7 +49,7 @@ export default function ProfileScreen() {
     try {
       const data = await api.getMyOrders();
       setRecentOrders(Array.isArray(data) ? data.slice(0, 5) : []);
-    } catch {}
+    } catch (err) { console.warn("[Profile] Failed:", err); }
   }, []);
 
   const fetchAddresses = useCallback(async () => {
@@ -64,7 +57,7 @@ export default function ProfileScreen() {
     try {
       const data = await api.getAddresses();
       setAddresses(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch (err) { console.warn("[Profile] Failed:", err); }
   }, [isClient]);
 
   useEffect(() => { fetchOrders(); fetchAddresses(); }, [fetchOrders, fetchAddresses]);
@@ -119,6 +112,10 @@ export default function ProfileScreen() {
   const handleChangePassword = async () => {
     if (!currentPwd || !newPwd) {
       Alert.alert('Error', 'Completa ambos campos');
+      return;
+    }
+    if (newPwd.length < 8 || !/[A-Z]/.test(newPwd) || !/[a-z]/.test(newPwd) || !/[0-9]/.test(newPwd)) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número');
       return;
     }
     setPwdLoading(true);

@@ -21,6 +21,11 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Ingresa un email válido');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -39,7 +44,7 @@ export default function LoginScreen() {
         if (activeLocations.length === 1) {
           await selectLocation(activeLocations[0].id, activeLocations[0].name);
         }
-      } catch {}
+      } catch (err) { console.warn("[Login] Failed:", err); }
 
       const role = (user.role as Role) || 'CLIENT';
       router.replace(DEFAULT_ROUTE[role] || '/(tabs)');

@@ -25,16 +25,9 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/4ec44244-119b-469c-8c0a-af7addcdaf59"
-    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-updates",
       [
         "expo-splash-screen",
         {

@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const savedLocName = await storage.getLocationName();
           if (savedLocName) setSelectedLocationName(savedLocName);
         }
-      } catch {
-        // Token invalid, clear
+      } catch (err) {
+        console.warn('[Auth] Session restore failed:', err);
         await storage.clearAuth();
         api.setToken(null);
       }

@@ -47,7 +47,7 @@ export default function MenuScreen() {
       setCategories(Array.isArray(cats) ? cats : []);
       setProducts(Array.isArray(prods) ? prods : []);
       setAddonGroups(Array.isArray(addGrps) ? addGrps : []);
-    } catch {}
+    } catch (err) { console.warn("[Menu] Failed:", err); }
   }, [selectedLocationId]);
 
   useEffect(() => { fetchData().finally(() => setLoading(false)); }, [fetchData]);

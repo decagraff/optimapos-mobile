@@ -44,46 +44,15 @@ interface ByPayment {
   total: number;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function fmt(n: number): string {
-  return `S/ ${(Number(n) || 0).toFixed(2)}`;
-}
-
-function pctChange(current: number, prev: number): { value: number; direction: 'up' | 'down' | 'flat' } {
-  if (!prev) return { value: 0, direction: 'flat' };
-  const pct = ((current - prev) / prev) * 100;
-  return { value: Math.abs(Math.round(pct)), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
-}
-
-function todayStr(): string {
-  const d = new Date();
-  return d.toISOString().split('T')[0];
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  DINE_IN: 'En mesa',
-  PICKUP: 'Para llevar',
-  DELIVERY: 'Delivery',
-};
-
-const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'Efectivo',
-  YAPE: 'Yape',
-  TRANSFER: 'Transferencia',
-  IZIPAY: 'Izipay',
-};
+// ─── Helpers (centralized) ────────────────────────────────────────────
+import { fmt, pctChange, todayStr, daysAgo } from '@/utils/helpers';
+import { TYPE_LABELS, PAYMENT_LABELS } from '@/constants/labels';
 
 const PERIOD_OPTIONS = [
   { label: 'Hoy', from: todayStr(), to: todayStr() },
   { label: '7 días', from: daysAgo(7), to: todayStr() },
   { label: '30 días', from: daysAgo(30), to: todayStr() },
 ];
-
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
-}
 
 // ─── Stat Card ────────────────────────────────────────────────────────
 function StatCard({ icon, value, label, color, change }: {
@@ -162,7 +131,7 @@ export default function ReportsScreen() {
       setTopProducts(Array.isArray(topData) ? topData : []);
       setByType(Array.isArray(typeData) ? typeData : []);
       setByPayment(Array.isArray(payData) ? payData : []);
-    } catch {}
+    } catch (err) { console.warn('[Reports] Failed:', err); }
   }, [period.from, period.to, selectedLocationId]);
 
   useEffect(() => { setLoading(true); fetchData().finally(() => setLoading(false)); }, [fetchData]);

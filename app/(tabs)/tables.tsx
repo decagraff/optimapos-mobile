@@ -12,12 +12,8 @@ import { TablesSkeleton } from '@/components/ui/Skeleton';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { Table } from '@/types';
 
-const STATUS_LABELS: Record<string, string> = {
-  FREE: 'Libre',
-  AVAILABLE: 'Disponible',
-  OCCUPIED: 'Ocupada',
-  RESERVED: 'Reservada',
-};
+import { TABLE_STATUS_LABELS } from '@/constants/labels';
+const STATUS_LABELS = TABLE_STATUS_LABELS;
 
 export default function TablesScreen() {
   const { selectedLocationId } = useAuth();
@@ -31,7 +27,7 @@ export default function TablesScreen() {
     try {
       const data = await api.getTables(selectedLocationId || undefined);
       setTables(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch (err) { console.warn('[Tables] Failed:', err); }
   }, [selectedLocationId]);
 
   useEffect(() => { fetchTables().finally(() => setLoading(false)); }, [fetchTables]);
