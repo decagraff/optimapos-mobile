@@ -5,17 +5,19 @@ import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
 import { useSocket } from '@/hooks/useSocket';
+import { usePrinter } from '@/context/PrinterContext';
 import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { User, LogOut, Building2, MapPin, Wifi, WifiOff, Package, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { User, LogOut, Building2, MapPin, Wifi, WifiOff, Package, ChevronDown, ChevronUp, Printer } from 'lucide-react-native';
 import type { Product } from '@/types';
 
 export default function MoreScreen() {
   const { user, logout, selectedLocationId, selectedLocationName } = useAuth();
   const { config, disconnect } = useServer();
   const { isConnected } = useSocket();
+  const { isActive: printerActive } = usePrinter();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
   const [products, setProducts] = useState<Product[]>([]);
   const [showProducts, setShowProducts] = useState(false);
@@ -107,6 +109,14 @@ export default function MoreScreen() {
             {isConnected ? 'En línea' : 'Sin conexión'}
           </Text>
         </View>
+        <View style={styles.divider} />
+        <Pressable style={styles.infoRow} onPress={() => router.push('/printer-setup')}>
+          <Printer size={18} color={printerActive ? Colors.success : Colors.textTertiary} />
+          <Text style={styles.infoLabel}>Impresora</Text>
+          <Text style={[styles.infoValue, { color: printerActive ? Colors.success : Colors.textSecondary }]}>
+            {printerActive ? 'Activa' : 'Configurar'}
+          </Text>
+        </Pressable>
         <View style={styles.divider} />
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Versión</Text>
