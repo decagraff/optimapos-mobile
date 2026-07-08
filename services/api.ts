@@ -10,12 +10,16 @@ class ApiError extends Error {
 }
 
 type LogoutCallback = () => void;
+type TokenRefreshedCallback = (token: string, refreshToken: string) => void;
 
 class ApiClient {
   private baseUrl = '';
   private token: string | null = null;
+  private refreshToken: string | null = null;
   private tenantHost = '';
   private onLogout: LogoutCallback | null = null;
+  private onTokenRefreshed: TokenRefreshedCallback | null = null;
+  private refreshPromise: Promise<string> | null = null;
 
   configure(baseUrl: string, tenantHost: string) {
     this.baseUrl = baseUrl;
@@ -26,11 +30,34 @@ class ApiClient {
     this.token = token;
   }
 
+  setRefreshToken(token: string | null) {
+    this.refreshToken = token;
+  }
+
   setLogoutCallback(cb: LogoutCallback) {
     this.onLogout = cb;
   }
 
-  private async request<T>(method: string, path: string, body?: any): Promise<T> {
+  setTokenRefreshedCallback(cb: TokenRefreshedCallback) {
+    this.onTokenRefreshed = cb;
+  }
+
+  private async doRefresh(): Promise<string> {
+    if (!this.refreshToken) throw new Error('No refresh token');
+    const res = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': this.tenantHost },
+      body: JSON.stringify({ refreshToken: this.refreshToken }),
+    });
+    if (!res.ok) throw new Error('Refresh failed');
+    const data = await res.json();
+    this.token = data.token;
+    this.refreshToken = data.refreshToken;
+    this.onTokenRefreshed?.(data.token, data.refreshToken);
+    return data.token;
+  }
+
+  private async request<T>(method: string, path: string, body?: any, _isRetry = false): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Tenant-Id': this.tenantHost,
@@ -46,6 +73,18 @@ class ApiClient {
     });
 
     if (res.status === 401) {
+      if (!_isRetry && this.refreshToken) {
+        try {
+          if (!this.refreshPromise) {
+            this.refreshPromise = this.doRefresh().finally(() => { this.refreshPromise = null; });
+          }
+          await this.refreshPromise;
+          return this.request<T>(method, path, body, true);
+        } catch {
+          this.onLogout?.();
+          throw new ApiError('Sesión expirada', 401);
+        }
+      }
       this.onLogout?.();
       throw new ApiError('Sesión expirada', 401);
     }

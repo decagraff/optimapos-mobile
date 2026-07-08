@@ -54,7 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
           return;
         }
+        const savedRefresh = await storage.getRefreshToken();
         api.setToken(savedToken);
+        api.setRefreshToken(savedRefresh);
         const profile = await api.getProfile();
         const savedUser = await storage.getUser();
         // Merge profile with saved locationIds
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('[Auth] Session restore failed:', err);
         await storage.clearAuth();
         api.setToken(null);
+        api.setRefreshToken(null);
       }
       setIsLoading(false);
     })();
@@ -85,15 +88,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.setLogoutCallback(async () => {
       await storage.clearAuth();
       api.setToken(null);
+      api.setRefreshToken(null);
       setUser(null);
       setToken(null);
+    });
+    api.setTokenRefreshedCallback(async (newToken, newRefresh) => {
+      await storage.setToken(newToken);
+      await storage.setRefreshToken(newRefresh);
+      setToken(newToken);
     });
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<User> => {
     const result = await api.login(email, password);
     api.setToken(result.token);
+    if (result.refreshToken) api.setRefreshToken(result.refreshToken);
     await storage.setToken(result.token);
+    if (result.refreshToken) await storage.setRefreshToken(result.refreshToken);
     await storage.setUser(result.user);
     setUser(result.user);
     setToken(result.token);
@@ -124,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await storage.clearAuth();
     api.setToken(null);
+    api.setRefreshToken(null);
     setUser(null);
     setToken(null);
     setSelectedLocationId(null);

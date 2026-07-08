@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const KEYS = {
   TOKEN: 'auth_token',
+  REFRESH_TOKEN: 'auth_refresh_token',
   USER: 'auth_user',
   SLUG: 'server_slug',
   LOCATION_ID: 'selected_location_id',
@@ -15,6 +16,14 @@ export const storage = {
   },
   async setToken(token: string): Promise<void> {
     await SecureStore.setItemAsync(KEYS.TOKEN, token);
+  },
+
+  // Refresh token
+  async getRefreshToken(): Promise<string | null> {
+    return SecureStore.getItemAsync(KEYS.REFRESH_TOKEN);
+  },
+  async setRefreshToken(token: string): Promise<void> {
+    await SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, token);
   },
 
   // User (JSON serialized)
@@ -52,6 +61,7 @@ export const storage = {
   // Clear all auth data
   async clearAuth(): Promise<void> {
     await SecureStore.deleteItemAsync(KEYS.TOKEN);
+    await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN);
     await SecureStore.deleteItemAsync(KEYS.USER);
     await SecureStore.deleteItemAsync(KEYS.LOCATION_ID);
     await SecureStore.deleteItemAsync(KEYS.LOCATION_NAME);
@@ -60,6 +70,7 @@ export const storage = {
   // Clear everything (including server)
   async clearAll(): Promise<void> {
     await SecureStore.deleteItemAsync(KEYS.TOKEN);
+    await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN);
     await SecureStore.deleteItemAsync(KEYS.USER);
     await SecureStore.deleteItemAsync(KEYS.SLUG);
     await SecureStore.deleteItemAsync(KEYS.LOCATION_ID);
