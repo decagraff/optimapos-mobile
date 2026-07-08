@@ -28,8 +28,8 @@ export async function printViaTCP(
       { host: config.ip, port: config.port },
       () => {
         clearTimeout(timer);
-        const buffer = Buffer.from(data);
-        client.write(buffer, undefined, () => {
+        const buffer = new Uint8Array(data);
+        client.write(buffer as any, undefined, () => {
           setTimeout(() => {
             client.destroy();
             finish({ success: true });
