@@ -22,7 +22,7 @@ function formatMoney(value: number | string | null | undefined): string {
 }
 
 function getItemName(item: any): string {
-  return item.product?.name || item.name || item.combo?.name || 'Producto';
+  return item.product?.name || item.combo?.name || item.productName || item.name || 'Producto';
 }
 
 // ─── ESC/POS Constants ──────────────────────────────────────────────────────
