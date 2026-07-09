@@ -9,13 +9,15 @@ const STORAGE_KEY = 'printer_config';
 const CURRENCY_SYMBOL = 'S/';
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1500;
+const DEDUP_TTL = 60_000; // ignore duplicate jobIds within 60s
 
 export interface PrinterBridgeConfig {
-  enabled: boolean;       // Este device actua como bridge de impresion
+  enabled: boolean;
   ip: string;
   port: number;
   copies: number;
-  events: string[];       // Que eventos imprimir
+  events: string[];
+  orderTypes: string[]; // empty = all types
 }
 
 const DEFAULT_CONFIG: PrinterBridgeConfig = {
@@ -24,11 +26,12 @@ const DEFAULT_CONFIG: PrinterBridgeConfig = {
   port: 9100,
   copies: 1,
   events: ['ORDER_CREATED', 'ORDER_CLOSED', 'PRE_BILL'],
+  orderTypes: [],
 };
 
 interface PrinterContextType {
   config: PrinterBridgeConfig;
-  isActive: boolean;           // enabled + socket conectado + ip configurada
+  isActive: boolean;
   lastJobStatus: 'idle' | 'printing' | 'success' | 'error';
   lastError: string | null;
   updateConfig: (patch: Partial<PrinterBridgeConfig>) => Promise<void>;
@@ -52,8 +55,8 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   const [lastJobStatus, setLastJobStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [lastError, setLastError] = useState<string | null>(null);
   const configRef = useRef(config);
+  const recentJobs = useRef<Map<string, number>>(new Map()); // jobId -> timestamp
 
-  // Keep ref in sync so socket listener always has latest config
   useEffect(() => { configRef.current = config; }, [config]);
 
   // Load config on mount
@@ -75,17 +78,36 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  // Core print execution
   const executePrintJob = useCallback(async (job: any) => {
     const cfg = configRef.current;
-    if (!cfg.enabled || !cfg.ip || !cfg.events.includes(job.event)) return;
+    if (!cfg.enabled || !cfg.ip) return;
+
+    // Filter by event type
+    if (!cfg.events.includes(job.event)) return;
+
+    // Filter by printer IP — only handle jobs meant for our printer
+    if (job.printer?.address && job.printer.address !== cfg.ip) return;
+
+    // Filter by order type if configured
+    if (cfg.orderTypes.length > 0 && job.data?.order?.type) {
+      if (!cfg.orderTypes.includes(job.data.order.type)) return;
+    }
+
+    // Deduplicate — skip if we processed this jobId recently
+    const now = Date.now();
+    const seen = recentJobs.current;
+    if (seen.has(job.jobId)) return;
+    seen.set(job.jobId, now);
+    // Clean old entries
+    for (const [id, ts] of seen) {
+      if (now - ts > DEDUP_TTL) seen.delete(id);
+    }
 
     setLastJobStatus('printing');
     setLastError(null);
 
     try {
-      const serverUrl = ''; // No images in mobile
-      const data = await renderPrintJobBinary(job, CURRENCY_SYMBOL, serverUrl);
+      const data = await renderPrintJobBinary(job, CURRENCY_SYMBOL, '');
       const copies = Math.max(1, Math.min(cfg.copies || 1, 5));
 
       let lastErr = '';
@@ -132,16 +154,16 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     const ESC = 0x1B; const GS = 0x1D; const LF = 0x0A;
     const tb = (s: string) => Array.from(s).map(c => c.charCodeAt(0) & 0xFF);
     const bytes: number[] = [
-      ESC, 0x40,           // Init
-      ESC, 0x61, 0x01,     // Center
-      ESC, 0x45, 0x01,     // Bold on
+      ESC, 0x40,
+      ESC, 0x61, 0x01,
+      ESC, 0x45, 0x01,
       ...tb('OptimaPOS'), LF,
-      ESC, 0x45, 0x00,     // Bold off
+      ESC, 0x45, 0x00,
       ...tb('--- Ticket de prueba ---'), LF,
       ...tb(new Date().toLocaleString('es-PE')), LF,
       ...tb('Impresora conectada OK'), LF,
       LF, LF, LF,
-      GS, 0x56, 0x01,      // Partial cut
+      GS, 0x56, 0x01,
     ];
     return printViaTCP({ ip: config.ip, port: config.port }, bytes);
   }, [config.ip, config.port]);
