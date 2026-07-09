@@ -186,6 +186,10 @@ class ApiClient {
     return this.post('/api/orders', data);
   }
 
+  async createOrderPOS(data: any): Promise<{ order: Order }> {
+    return this.post('/api/orders/pos', data);
+  }
+
   async updateOrderStatus(orderId: number, status: string): Promise<Order> {
     return this.patch(`/api/orders/${orderId}/status`, { status });
   }
