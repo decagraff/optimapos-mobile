@@ -6,10 +6,19 @@ import { printViaTCP } from '@/services/printer.service';
 import { renderPrintJobBinary } from '@/services/escpos-binary';
 
 const STORAGE_KEY = 'printer_config';
+const DEVICE_ID_KEY = 'printer_device_id';
 const CURRENCY_SYMBOL = 'S/';
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1500;
 const DEDUP_TTL = 60_000; // ignore duplicate jobIds within 60s
+const CLAIM_TIMEOUT = 3000; // ms to wait for claim response
+
+function generateDeviceId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let id = 'mob_';
+  for (let i = 0; i < 20; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
 
 export interface PrinterBridgeConfig {
   enabled: boolean;
@@ -56,19 +65,27 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   const [lastError, setLastError] = useState<string | null>(null);
   const configRef = useRef(config);
   const recentJobs = useRef<Map<string, number>>(new Map()); // jobId -> timestamp
+  const deviceIdRef = useRef<string>('');
 
   useEffect(() => { configRef.current = config; }, [config]);
 
-  // Load config on mount
+  // Load config + deviceId on mount
   useEffect(() => {
-    SecureStore.getItemAsync(STORAGE_KEY).then(raw => {
+    (async () => {
+      const raw = await SecureStore.getItemAsync(STORAGE_KEY);
       if (raw) {
         try {
           const saved = JSON.parse(raw);
           setConfig({ ...DEFAULT_CONFIG, ...saved });
         } catch {}
       }
-    });
+      let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+      if (!deviceId) {
+        deviceId = generateDeviceId();
+        await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+      }
+      deviceIdRef.current = deviceId;
+    })();
   }, []);
 
   const updateConfig = useCallback(async (patch: Partial<PrinterBridgeConfig>) => {
@@ -93,6 +110,18 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     // Clean old entries
     for (const [id, ts] of seen) {
       if (now - ts > DEDUP_TTL) seen.delete(id);
+    }
+
+    // Claim the job — only one device should print per job
+    if (socket && deviceIdRef.current) {
+      const granted = await new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), CLAIM_TIMEOUT);
+        socket.emit('claim_print_job', { jobId: job.jobId, deviceId: deviceIdRef.current }, (resp: { granted: boolean }) => {
+          clearTimeout(timer);
+          resolve(resp?.granted ?? false);
+        });
+      });
+      if (!granted) return;
     }
 
     setLastJobStatus('printing');

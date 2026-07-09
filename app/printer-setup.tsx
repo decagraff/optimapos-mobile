@@ -68,6 +68,14 @@ export default function PrinterSetupScreen() {
     if (canReadPrinters) fetchPrinters();
   }, [canReadPrinters]);
 
+  // Auto-select printer matching saved config.ip when printers load
+  useEffect(() => {
+    if (printers.length > 0 && config.ip && selectedPrinterId === null) {
+      const match = printers.find(p => p.address === config.ip);
+      if (match) setSelectedPrinterId(match.id);
+    }
+  }, [printers, config.ip]);
+
   const fetchPrinters = async () => {
     setLoadingPrinters(true);
     try {
