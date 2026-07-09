@@ -259,7 +259,7 @@ class ApiClient {
   // ─── Printers ─────────────────────────────────────────────────
   async getPrinters(locationId?: number): Promise<any[]> {
     const q = locationId ? `?locationId=${locationId}` : '';
-    return this.get(`/api/printer/printers${q}`);
+    return this.get(`/api/printer-config/printers${q}`);
   }
 
   // ─── Repeat order ──────────────────────────────────────────────
