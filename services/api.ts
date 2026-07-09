@@ -73,6 +73,14 @@ class ApiClient {
     });
 
     if (res.status === 401) {
+      // Auth endpoints (login/register) return 401 for wrong credentials — don't trigger logout
+      const isAuthEndpoint = path === '/api/auth/login' || path === '/api/auth/register';
+      if (isAuthEndpoint) {
+        let msg = 'Credenciales incorrectas';
+        try { const e = await res.json(); msg = e.error || msg; } catch {}
+        throw new ApiError(msg, 401);
+      }
+      // For authenticated endpoints, try refresh first
       if (!_isRetry && this.refreshToken) {
         try {
           if (!this.refreshPromise) {
@@ -246,6 +254,12 @@ class ApiClient {
 
   put<T>(path: string, body?: any) {
     return this.request<T>('PUT', path, body);
+  }
+
+  // ─── Printers ─────────────────────────────────────────────────
+  async getPrinters(locationId?: number): Promise<any[]> {
+    const q = locationId ? `?locationId=${locationId}` : '';
+    return this.get(`/api/printer/printers${q}`);
   }
 
   // ─── Repeat order ──────────────────────────────────────────────

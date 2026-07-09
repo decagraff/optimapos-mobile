@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,39 +8,96 @@ import {
   Alert,
   TextInput,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { usePrinter } from '@/context/PrinterContext';
+import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { Printer, Wifi, WifiOff, CheckCircle, XCircle, ChevronLeft, Zap } from 'lucide-react-native';
+import {
+  Printer, Wifi, WifiOff, CheckCircle, XCircle,
+  ChevronLeft, Zap, RefreshCw, ChevronDown,
+} from 'lucide-react-native';
 
-const EVENT_OPTIONS = [
-  { key: 'ORDER_CREATED',   label: 'Comanda nueva',          desc: 'Se crea una nueva orden' },
-  { key: 'ITEMS_ADDED',     label: 'Ítems añadidos',         desc: 'Se agregan productos a una orden' },
-  { key: 'ITEM_CANCELLED',  label: 'Ítem cancelado',         desc: 'Se cancela un producto' },
-  { key: 'ORDER_MODIFIED',  label: 'Orden modificada',       desc: 'Cambios generales en la orden' },
-  { key: 'TABLE_CHANGED',   label: 'Cambio de mesa',         desc: 'Se mueve la orden a otra mesa' },
-  { key: 'PRE_BILL',        label: 'Pre-cuenta',             desc: 'Se solicita la cuenta' },
-  { key: 'ORDER_CLOSED',    label: 'Ticket de venta',        desc: 'Orden cerrada / cobrada' },
-  { key: 'DELIVERY_TICKET', label: 'Ticket delivery',        desc: 'Orden de delivery' },
-  { key: 'CASH_OPEN',       label: 'Apertura de caja',       desc: 'Se abre la caja' },
-  { key: 'CASH_CLOSE',      label: 'Cierre de caja',         desc: 'Se cierra la caja' },
-  { key: 'REPRINT',         label: 'Reimpresión',            desc: 'Reimpresión manual' },
-];
+const EVENT_LABELS: Record<string, string> = {
+  ORDER_CREATED:   'Comanda nueva',
+  ITEMS_ADDED:     'Ítems añadidos',
+  ITEM_CANCELLED:  'Ítem cancelado',
+  ORDER_MODIFIED:  'Orden modificada',
+  TABLE_CHANGED:   'Cambio de mesa',
+  PRE_BILL:        'Pre-cuenta',
+  ORDER_CLOSED:    'Ticket de venta',
+  DELIVERY_TICKET: 'Ticket delivery',
+  CASH_OPEN:       'Apertura de caja',
+  CASH_CLOSE:      'Cierre de caja',
+  REPRINT:         'Reimpresión',
+};
 
-const ORDER_TYPE_OPTIONS = [
-  { key: 'DINE_IN',   label: 'Mesa / Local' },
-  { key: 'DELIVERY',  label: 'Delivery' },
-  { key: 'TAKEAWAY',  label: 'Para llevar' },
-];
+const ORDER_TYPE_LABELS: Record<string, string> = {
+  DINE_IN:  'Mesa / Local',
+  DELIVERY: 'Delivery',
+  TAKEAWAY: 'Para llevar',
+};
+
+const ALL_EVENTS = Object.keys(EVENT_LABELS);
+const ALL_ORDER_TYPES = Object.keys(ORDER_TYPE_LABELS);
+
+interface BackendPrinter {
+  id: number;
+  name: string;
+  address: string;
+  port: number;
+  type: string;
+  isActive: boolean;
+  events: string[];
+  orderTypes: string[];
+  copies: number;
+  locationName?: string;
+}
 
 export default function PrinterSetupScreen() {
   const { config, isActive, lastJobStatus, lastError, updateConfig, testConnection, printTestTicket } = usePrinter();
+  const { user } = useAuth();
   const [testingConn, setTestingConn] = useState(false);
   const [testingPrint, setTestingPrint] = useState(false);
+  const [printers, setPrinters] = useState<BackendPrinter[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
+  const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
+  const [showPrinterPicker, setShowPrinterPicker] = useState(false);
+
+  const canReadPrinters = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+
+  useEffect(() => {
+    if (canReadPrinters) fetchPrinters();
+  }, [canReadPrinters]);
+
+  const fetchPrinters = async () => {
+    setLoadingPrinters(true);
+    try {
+      const data = await api.getPrinters();
+      setPrinters(Array.isArray(data) ? data.filter((p: BackendPrinter) => p.isActive) : []);
+    } catch {
+      // No permission or network error — manual mode only
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
+
+  const handleSelectPrinter = async (printer: BackendPrinter) => {
+    setSelectedPrinterId(printer.id);
+    setShowPrinterPicker(false);
+    await updateConfig({
+      ip: printer.address,
+      port: printer.port || 9100,
+      events: printer.events.length > 0 ? printer.events : ALL_EVENTS,
+      orderTypes: printer.orderTypes || [],
+      copies: printer.copies || 1,
+    });
+  };
 
   const handleToggleEvent = async (key: string) => {
     const current = config.events || [];
@@ -52,14 +109,6 @@ export default function PrinterSetupScreen() {
     const current = config.orderTypes || [];
     const next = current.includes(key) ? current.filter(t => t !== key) : [...current, key];
     await updateConfig({ orderTypes: next });
-  };
-
-  const handleSelectAllEvents = async () => {
-    await updateConfig({ events: EVENT_OPTIONS.map(e => e.key) });
-  };
-
-  const handleClearAllEvents = async () => {
-    await updateConfig({ events: [] });
   };
 
   const handleTestConnection = async () => {
@@ -98,6 +147,8 @@ export default function PrinterSetupScreen() {
     lastJobStatus === 'error'   ? 'Error'           :
     lastJobStatus === 'printing'? 'Imprimiendo...' : 'En espera';
 
+  const selectedPrinter = printers.find(p => p.id === selectedPrinterId);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
       {/* Header */}
@@ -118,8 +169,7 @@ export default function PrinterSetupScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.statusTitle}>{isActive ? 'Bridge activo' : 'Bridge inactivo'}</Text>
             <Text style={styles.statusSub}>
-              {isActive
-                ? `Escuchando en ${config.ip}:${config.port}`
+              {isActive ? `Escuchando en ${config.ip}:${config.port}`
                 : config.enabled && !config.ip ? 'Falta configurar la IP'
                 : config.enabled ? 'Sin conexión al servidor'
                 : 'Activa el toggle para habilitar'}
@@ -159,6 +209,51 @@ export default function PrinterSetupScreen() {
 
       {config.enabled && (
         <>
+          {/* Printer selector — Admin/Manager only */}
+          {canReadPrinters && (
+            <Card style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Impresora del sistema</Text>
+                  <Text style={styles.sectionSub}>Selecciona para autocompletar IP y eventos</Text>
+                </View>
+                <Pressable onPress={fetchPrinters} style={styles.refreshBtn}>
+                  {loadingPrinters
+                    ? <ActivityIndicator size="small" color={Colors.accent} />
+                    : <RefreshCw size={16} color={Colors.accent} />}
+                </Pressable>
+              </View>
+
+              <Pressable style={styles.pickerBtn} onPress={() => setShowPrinterPicker(!showPrinterPicker)}>
+                <Printer size={16} color={selectedPrinter ? Colors.accent : Colors.textTertiary} />
+                <Text style={[styles.pickerText, !selectedPrinter && styles.pickerPlaceholder]}>
+                  {selectedPrinter ? `${selectedPrinter.name} — ${selectedPrinter.address}` : 'Seleccionar impresora...'}
+                </Text>
+                <ChevronDown size={16} color={Colors.textTertiary} />
+              </Pressable>
+
+              {showPrinterPicker && (
+                <View style={styles.printerList}>
+                  {printers.length === 0 && (
+                    <Text style={styles.emptyText}>
+                      {loadingPrinters ? 'Cargando...' : 'Sin impresoras activas en el sistema. Configúralas en la web.'}
+                    </Text>
+                  )}
+                  {printers.map(p => (
+                    <Pressable key={p.id} style={styles.printerItem} onPress={() => handleSelectPrinter(p)}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.printerName}>{p.name}</Text>
+                        <Text style={styles.printerAddr}>{p.address}:{p.port} · {p.copies} cop. · {p.events.length} eventos</Text>
+                        {p.locationName && <Text style={styles.printerLocation}>{p.locationName}</Text>}
+                      </View>
+                      {selectedPrinterId === p.id && <CheckCircle size={16} color={Colors.success} />}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </Card>
+          )}
+
           {/* Connection */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Conexión TCP</Text>
@@ -197,7 +292,7 @@ export default function PrinterSetupScreen() {
           {/* Copies */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Copias por job</Text>
-            <Text style={styles.sectionSub}>Impresiones por cada evento recibido</Text>
+            <Text style={styles.sectionSub}>Fallback si el backend no especifica copias</Text>
             <View style={styles.copiesRow}>
               {[1, 2, 3, 4, 5].map(n => (
                 <Pressable key={n}
@@ -214,27 +309,24 @@ export default function PrinterSetupScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>Eventos a imprimir</Text>
-                <Text style={styles.sectionSub}>Selecciona qué acciones disparan la impresión</Text>
+                <Text style={styles.sectionSub}>Filtro adicional sobre la config del sistema</Text>
               </View>
               <View style={styles.selectBtns}>
-                <Pressable onPress={handleSelectAllEvents} style={styles.selectBtn}>
+                <Pressable onPress={() => updateConfig({ events: ALL_EVENTS })} style={styles.selectBtn}>
                   <Text style={styles.selectBtnText}>Todos</Text>
                 </Pressable>
-                <Pressable onPress={handleClearAllEvents} style={styles.selectBtn}>
+                <Pressable onPress={() => updateConfig({ events: [] })} style={styles.selectBtn}>
                   <Text style={styles.selectBtnText}>Ninguno</Text>
                 </Pressable>
               </View>
             </View>
             <View style={styles.eventList}>
-              {EVENT_OPTIONS.map(opt => (
-                <Pressable key={opt.key} style={styles.eventRow} onPress={() => handleToggleEvent(opt.key)}>
-                  <View style={[styles.checkbox, config.events?.includes(opt.key) && styles.checkboxChecked]}>
-                    {config.events?.includes(opt.key) && <CheckCircle size={14} color="#fff" />}
+              {ALL_EVENTS.map(key => (
+                <Pressable key={key} style={styles.eventRow} onPress={() => handleToggleEvent(key)}>
+                  <View style={[styles.checkbox, (config.events || []).includes(key) && styles.checkboxChecked]}>
+                    {(config.events || []).includes(key) && <CheckCircle size={14} color="#fff" />}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.eventLabel}>{opt.label}</Text>
-                    <Text style={styles.eventDesc}>{opt.desc}</Text>
-                  </View>
+                  <Text style={styles.eventLabel}>{EVENT_LABELS[key]}</Text>
                 </Pressable>
               ))}
             </View>
@@ -243,14 +335,14 @@ export default function PrinterSetupScreen() {
           {/* Order types */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Tipos de orden</Text>
-            <Text style={styles.sectionSub}>Vacío = todos los tipos. Marca solo los que quieres imprimir.</Text>
+            <Text style={styles.sectionSub}>Vacío = todos los tipos</Text>
             <View style={styles.eventList}>
-              {ORDER_TYPE_OPTIONS.map(opt => (
-                <Pressable key={opt.key} style={styles.eventRow} onPress={() => handleToggleOrderType(opt.key)}>
-                  <View style={[styles.checkbox, (config.orderTypes || []).includes(opt.key) && styles.checkboxChecked]}>
-                    {(config.orderTypes || []).includes(opt.key) && <CheckCircle size={14} color="#fff" />}
+              {ALL_ORDER_TYPES.map(key => (
+                <Pressable key={key} style={styles.eventRow} onPress={() => handleToggleOrderType(key)}>
+                  <View style={[styles.checkbox, (config.orderTypes || []).includes(key) && styles.checkboxChecked]}>
+                    {(config.orderTypes || []).includes(key) && <CheckCircle size={14} color="#fff" />}
                   </View>
-                  <Text style={styles.eventLabel}>{opt.label}</Text>
+                  <Text style={styles.eventLabel}>{ORDER_TYPE_LABELS[key]}</Text>
                 </Pressable>
               ))}
             </View>
@@ -283,9 +375,17 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
   sectionSub: { fontSize: FontSizes.sm, color: Colors.textSecondary },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
-  selectBtns: { flexDirection: 'row', gap: Spacing.xs, marginTop: 2 },
-  selectBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radii.sm, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
-  selectBtnText: { fontSize: FontSizes.xs, color: Colors.textSecondary, fontWeight: '600' },
+  refreshBtn: { padding: Spacing.xs },
+
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderColor: Colors.border, borderRadius: Radii.sm, padding: Spacing.md, backgroundColor: Colors.inputBg },
+  pickerText: { flex: 1, fontSize: FontSizes.md, color: Colors.text },
+  pickerPlaceholder: { color: Colors.textTertiary },
+  printerList: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radii.sm, overflow: 'hidden' },
+  printerItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, backgroundColor: Colors.card },
+  printerName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
+  printerAddr: { fontSize: FontSizes.xs, color: Colors.textSecondary, marginTop: 2 },
+  printerLocation: { fontSize: FontSizes.xs, color: Colors.accent, marginTop: 1 },
+  emptyText: { padding: Spacing.md, fontSize: FontSizes.sm, color: Colors.textTertiary, textAlign: 'center' },
 
   field: { gap: Spacing.xs },
   fieldLabel: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
@@ -297,12 +397,15 @@ const styles = StyleSheet.create({
   copyBtnText: { fontSize: FontSizes.lg, fontWeight: '600', color: Colors.textSecondary },
   copyBtnTextActive: { color: Colors.accentDark },
 
+  selectBtns: { flexDirection: 'row', gap: Spacing.xs, marginTop: 2 },
+  selectBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radii.sm, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
+  selectBtnText: { fontSize: FontSizes.xs, color: Colors.textSecondary, fontWeight: '600' },
+
   eventList: { gap: Spacing.xs },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   checkboxChecked: { backgroundColor: Colors.success, borderColor: Colors.success },
-  eventLabel: { fontSize: FontSizes.md, color: Colors.text, fontWeight: '600' },
-  eventDesc: { fontSize: FontSizes.xs, color: Colors.textSecondary, marginTop: 1 },
+  eventLabel: { fontSize: FontSizes.md, color: Colors.text },
 
   actions: { gap: Spacing.md, marginTop: Spacing.sm },
 });

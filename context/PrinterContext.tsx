@@ -108,7 +108,8 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
 
     try {
       const data = await renderPrintJobBinary(job, CURRENCY_SYMBOL, '');
-      const copies = Math.max(1, Math.min(cfg.copies || 1, 5));
+      // Prefer copies from backend printer config, fallback to local
+      const copies = Math.max(1, Math.min(job.rule?.copies || cfg.copies || 1, 5));
 
       let lastErr = '';
       for (let copy = 0; copy < copies; copy++) {
