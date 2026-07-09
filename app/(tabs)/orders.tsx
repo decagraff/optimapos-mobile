@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Pressable, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSizes, Radii, OrderStatusColors } from '@/constants/theme';
-import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight, Search, X, Calendar } from 'lucide-react-native';
+import { ClipboardList, Clock, ChevronDown, ChevronUp, ArrowRight, Search, X, Calendar, Printer } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { api } from '@/services/api';
@@ -50,6 +50,7 @@ const TYPE_FILTERS = ['DINE_IN', 'PICKUP', 'DELIVERY'];
 function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatusChange: (id: number, status: string) => void; userRole: Role }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [reprinting, setReprinting] = useState(false);
   const isActive = !['DELIVERED', 'CANCELLED'].includes(order.status);
   const statusColor = OrderStatusColors[order.status as OrderStatus] || Colors.textSecondary;
 
@@ -57,11 +58,25 @@ function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatus
   const transition = isActive ? (roleTransitions[order.status] || null) : null;
   const nextAction = transition ? { ...transition, color: STATUS_ACTION_COLORS[transition.status] || Colors.info } : null;
 
+  const canReprint = ['ADMIN', 'MANAGER', 'VENDOR'].includes(userRole);
+
   const handleStatusChange = async () => {
     if (!nextAction) return;
     setUpdating(true);
     await onStatusChange(order.id, nextAction.status);
     setUpdating(false);
+  };
+
+  const handleReprint = async () => {
+    setReprinting(true);
+    try {
+      await api.reprintOrder(order.id);
+      Alert.alert('Reimpresión enviada', 'El ticket será impreso en breve.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo enviar la reimpresión');
+    } finally {
+      setReprinting(false);
+    }
   };
 
   return (
@@ -71,6 +86,11 @@ function OrderCard({ order, onStatusChange, userRole }: { order: Order; onStatus
           <View style={styles.orderInfo}>
             <Text style={styles.orderCode}>#{order.code?.split('-').pop() || order.id}</Text>
             <Badge label={STATUS_LABELS[order.status] || order.status} color={statusColor} />
+            {canReprint && (
+              <Pressable onPress={handleReprint} disabled={reprinting} style={styles.reprintBtn}>
+                <Printer size={15} color={reprinting ? Colors.textTertiary : Colors.textSecondary} />
+              </Pressable>
+            )}
           </View>
           <View style={styles.orderMeta}>
             <Text style={styles.orderType}>{TYPE_LABELS[order.type] || order.type}</Text>
@@ -407,6 +427,7 @@ const styles = StyleSheet.create({
   orderHeader: { gap: Spacing.xs },
   orderInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderCode: { fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text },
+  reprintBtn: { padding: 4, marginLeft: 4 },
   orderMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
   orderType: { fontSize: FontSizes.xs, color: Colors.textSecondary },
   orderTable: { fontSize: FontSizes.xs, color: Colors.textSecondary },

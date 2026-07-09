@@ -20,6 +20,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useLocationTracking } from '@/hooks/useLocationTracking';
 import type { Order, OrderStatus } from '@/types';
 
 // ─── Helpers (centralized) ────────────────────────────────────────────
@@ -29,7 +30,7 @@ const STATUS_LABELS = DELIVERY_STATUS_LABELS;
 
 // ─── Delivery Card ────────────────────────────────────────────────────
 function DeliveryCard({
-  order, onAction, onPhoto, onClaim, isMyOrder, serverUrl,
+  order, onAction, onPhoto, onClaim, isMyOrder, serverUrl, onStartTracking, onStopTracking, isTrackingThis,
 }: {
   order: Order;
   onAction: (id: number, status: string) => void;
@@ -37,6 +38,9 @@ function DeliveryCard({
   onClaim: (id: number) => void;
   isMyOrder: boolean;
   serverUrl: string;
+  onStartTracking?: (orderId: number) => void;
+  onStopTracking?: () => void;
+  isTrackingThis?: boolean;
 }) {
   const [updating, setUpdating] = useState(false);
   const mins = minutesSince(order.createdAt);
@@ -50,6 +54,7 @@ function DeliveryCard({
   const handlePickup = async () => {
     setUpdating(true);
     await onAction(order.id, 'ON_THE_WAY');
+    onStartTracking?.(order.id);
     setUpdating(false);
   };
 
@@ -59,6 +64,7 @@ function DeliveryCard({
       return;
     }
     setUpdating(true);
+    onStopTracking?.();
     await onAction(order.id, 'DELIVERED');
     setUpdating(false);
   };
@@ -176,6 +182,16 @@ function DeliveryCard({
             </View>
           )}
 
+          {/* GPS Tracking indicator */}
+          {isTrackingThis && isOnTheWay && (
+            <View style={[styles.quickActions, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                <Text style={{ color: '#059669', fontSize: 12, fontWeight: '600' }}>GPS activo — enviando ubicación</Text>
+              </View>
+            </View>
+          )}
+
           {/* Photo section (ON_THE_WAY) */}
           {isOnTheWay && (
             <View style={styles.photoSection}>
@@ -235,6 +251,7 @@ export default function DeliveriesScreen() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { config } = useContext(ServerContext);
+  const { isTracking, trackingOrderId, startTracking, stopTracking } = useLocationTracking();
   const { isTablet } = useResponsive();
   const serverUrl = config?.baseUrl || '';
   const [orders, setOrders] = useState<Order[]>([]);
@@ -379,6 +396,9 @@ export default function DeliveriesScreen() {
               onPhoto={handlePhoto}
               onClaim={handleClaim}
               serverUrl={serverUrl}
+              onStartTracking={startTracking}
+              onStopTracking={stopTracking}
+              isTrackingThis={isTracking && trackingOrderId === item.id}
             />
           )}
           stickySectionHeadersEnabled={false}

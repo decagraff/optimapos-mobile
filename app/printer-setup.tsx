@@ -37,14 +37,7 @@ const EVENT_LABELS: Record<string, string> = {
   REPRINT:         'Reimpresión',
 };
 
-const ORDER_TYPE_LABELS: Record<string, string> = {
-  DINE_IN:  'Mesa / Local',
-  DELIVERY: 'Delivery',
-  TAKEAWAY: 'Para llevar',
-};
-
 const ALL_EVENTS = Object.keys(EVENT_LABELS);
-const ALL_ORDER_TYPES = Object.keys(ORDER_TYPE_LABELS);
 
 interface BackendPrinter {
   id: number;
@@ -97,18 +90,6 @@ export default function PrinterSetupScreen() {
       orderTypes: printer.orderTypes || [],
       copies: printer.copies || 1,
     });
-  };
-
-  const handleToggleEvent = async (key: string) => {
-    const current = config.events || [];
-    const next = current.includes(key) ? current.filter(e => e !== key) : [...current, key];
-    await updateConfig({ events: next });
-  };
-
-  const handleToggleOrderType = async (key: string) => {
-    const current = config.orderTypes || [];
-    const next = current.includes(key) ? current.filter(t => t !== key) : [...current, key];
-    await updateConfig({ orderTypes: next });
   };
 
   const handleTestConnection = async () => {
@@ -254,97 +235,47 @@ export default function PrinterSetupScreen() {
             </Card>
           )}
 
-          {/* Connection */}
+          {/* Connection — Admin/Manager: IP auto-filled from printer selector; others: manual */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Conexión TCP</Text>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>IP de la impresora</Text>
-              <TextInput
-                style={styles.input}
-                value={config.ip}
-                onChangeText={ip => updateConfig({ ip: ip.trim() })}
-                placeholder="192.168.1.100"
-                placeholderTextColor={Colors.textTertiary}
-                keyboardType="decimal-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Puerto</Text>
-              <TextInput
-                style={styles.input}
-                value={String(config.port)}
-                onChangeText={p => { const n = parseInt(p, 10); if (!isNaN(n) && n > 0) updateConfig({ port: n }); }}
-                placeholder="9100"
-                placeholderTextColor={Colors.textTertiary}
-                keyboardType="number-pad"
-              />
-            </View>
+            {!canReadPrinters && (
+              <>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>IP de la impresora</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={config.ip}
+                    onChangeText={ip => updateConfig({ ip: ip.trim() })}
+                    placeholder="192.168.1.100"
+                    placeholderTextColor={Colors.textTertiary}
+                    keyboardType="decimal-pad"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Puerto</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={String(config.port)}
+                    onChangeText={p => { const n = parseInt(p, 10); if (!isNaN(n) && n > 0) updateConfig({ port: n }); }}
+                    placeholder="9100"
+                    placeholderTextColor={Colors.textTertiary}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </>
+            )}
+            {canReadPrinters && config.ip ? (
+              <Text style={styles.sectionSub}>{config.ip}:{config.port}</Text>
+            ) : canReadPrinters ? (
+              <Text style={styles.sectionSub}>Selecciona una impresora arriba para configurar la IP automáticamente.</Text>
+            ) : null}
             <View style={styles.actions}>
               <Button title={testingConn ? 'Probando...' : 'Probar conexión'} onPress={handleTestConnection}
                 variant="outline" fullWidth icon={testingConn ? undefined : Wifi} disabled={testingConn || testingPrint} />
               <Button title={testingPrint ? 'Imprimiendo...' : 'Ticket de prueba'} onPress={handlePrintTest}
                 variant="secondary" fullWidth icon={testingPrint ? undefined : Zap} disabled={testingConn || testingPrint} />
-            </View>
-          </Card>
-
-          {/* Copies */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Copias por job</Text>
-            <Text style={styles.sectionSub}>Fallback si el backend no especifica copias</Text>
-            <View style={styles.copiesRow}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <Pressable key={n}
-                  style={[styles.copyBtn, config.copies === n && styles.copyBtnActive]}
-                  onPress={() => updateConfig({ copies: n })}>
-                  <Text style={[styles.copyBtnText, config.copies === n && styles.copyBtnTextActive]}>{n}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </Card>
-
-          {/* Events */}
-          <Card style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Eventos a imprimir</Text>
-                <Text style={styles.sectionSub}>Filtro adicional sobre la config del sistema</Text>
-              </View>
-              <View style={styles.selectBtns}>
-                <Pressable onPress={() => updateConfig({ events: ALL_EVENTS })} style={styles.selectBtn}>
-                  <Text style={styles.selectBtnText}>Todos</Text>
-                </Pressable>
-                <Pressable onPress={() => updateConfig({ events: [] })} style={styles.selectBtn}>
-                  <Text style={styles.selectBtnText}>Ninguno</Text>
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.eventList}>
-              {ALL_EVENTS.map(key => (
-                <Pressable key={key} style={styles.eventRow} onPress={() => handleToggleEvent(key)}>
-                  <View style={[styles.checkbox, (config.events || []).includes(key) && styles.checkboxChecked]}>
-                    {(config.events || []).includes(key) && <CheckCircle size={14} color="#fff" />}
-                  </View>
-                  <Text style={styles.eventLabel}>{EVENT_LABELS[key]}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </Card>
-
-          {/* Order types */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Tipos de orden</Text>
-            <Text style={styles.sectionSub}>Vacío = todos los tipos</Text>
-            <View style={styles.eventList}>
-              {ALL_ORDER_TYPES.map(key => (
-                <Pressable key={key} style={styles.eventRow} onPress={() => handleToggleOrderType(key)}>
-                  <View style={[styles.checkbox, (config.orderTypes || []).includes(key) && styles.checkboxChecked]}>
-                    {(config.orderTypes || []).includes(key) && <CheckCircle size={14} color="#fff" />}
-                  </View>
-                  <Text style={styles.eventLabel}>{ORDER_TYPE_LABELS[key]}</Text>
-                </Pressable>
-              ))}
             </View>
           </Card>
         </>
@@ -390,22 +321,6 @@ const styles = StyleSheet.create({
   field: { gap: Spacing.xs },
   fieldLabel: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textSecondary },
   input: { borderWidth: 1, borderColor: Colors.inputBorder, borderRadius: Radii.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: FontSizes.md, color: Colors.text, backgroundColor: Colors.inputBg },
-
-  copiesRow: { flexDirection: 'row', gap: Spacing.md },
-  copyBtn: { width: 48, height: 48, borderRadius: Radii.sm, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
-  copyBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accentLight },
-  copyBtnText: { fontSize: FontSizes.lg, fontWeight: '600', color: Colors.textSecondary },
-  copyBtnTextActive: { color: Colors.accentDark },
-
-  selectBtns: { flexDirection: 'row', gap: Spacing.xs, marginTop: 2 },
-  selectBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radii.sm, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
-  selectBtnText: { fontSize: FontSizes.xs, color: Colors.textSecondary, fontWeight: '600' },
-
-  eventList: { gap: Spacing.xs },
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  checkboxChecked: { backgroundColor: Colors.success, borderColor: Colors.success },
-  eventLabel: { fontSize: FontSizes.md, color: Colors.text },
 
   actions: { gap: Spacing.md, marginTop: Spacing.sm },
 });

@@ -267,6 +267,11 @@ class ApiClient {
     return this.post(`/api/orders/repeat/${orderId}`);
   }
 
+  // ─── Reprint order ─────────────────────────────────────────────
+  async reprintOrder(orderId: number): Promise<{ message: string }> {
+    return this.post(`/api/orders/${orderId}/reprint`);
+  }
+
   // ─── Change password ──────────────────────────────────────────
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
     return this.patch('/api/users/me/password', { currentPassword, newPassword });

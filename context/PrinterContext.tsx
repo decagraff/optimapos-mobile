@@ -82,16 +82,8 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     const cfg = configRef.current;
     if (!cfg.enabled || !cfg.ip) return;
 
-    // Filter by event type
-    if (!cfg.events.includes(job.event)) return;
-
-    // Filter by printer IP — only handle jobs meant for our printer
-    if (job.printer?.address && job.printer.address !== cfg.ip) return;
-
-    // Filter by order type if configured
-    if (cfg.orderTypes.length > 0 && job.data?.order?.type) {
-      if (!cfg.orderTypes.includes(job.data.order.type)) return;
-    }
+    // Filter by printer IP — only skip if job has an address AND it doesn't match ours
+    if (cfg.ip && job.printer?.address && job.printer.address !== cfg.ip) return;
 
     // Deduplicate — skip if we processed this jobId recently
     const now = Date.now();

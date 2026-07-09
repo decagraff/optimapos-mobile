@@ -25,9 +25,25 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4ec44244-119b-469c-8c0a-af7addcdaf59",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 5000
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-updates",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "OptimaPOS necesita acceso a tu ubicación para el tracking de delivery.",
+          "locationWhenInUsePermission": "OptimaPOS necesita acceso a tu ubicación para el tracking de delivery."
+        }
+      ],
       [
         "expo-splash-screen",
         {
