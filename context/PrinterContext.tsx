@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import type { ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { SocketContext } from './SocketContext';
-import { printViaTCP } from '@/services/printer.service';
+import { printViaTCP, testTCPConnection } from '@/services/printer.service';
 import { renderPrintJobBinary } from '@/services/escpos-binary';
 
 const STORAGE_KEY = 'printer_config';
@@ -41,6 +41,7 @@ const DEFAULT_CONFIG: PrinterBridgeConfig = {
 interface PrinterContextType {
   config: PrinterBridgeConfig;
   isActive: boolean;
+  printerReady: boolean;
   lastJobStatus: 'idle' | 'printing' | 'success' | 'error';
   lastError: string | null;
   updateConfig: (patch: Partial<PrinterBridgeConfig>) => Promise<void>;
@@ -51,6 +52,7 @@ interface PrinterContextType {
 export const PrinterContext = createContext<PrinterContextType>({
   config: DEFAULT_CONFIG,
   isActive: false,
+  printerReady: false,
   lastJobStatus: 'idle',
   lastError: null,
   updateConfig: async () => {},
@@ -63,20 +65,28 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<PrinterBridgeConfig>(DEFAULT_CONFIG);
   const [lastJobStatus, setLastJobStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [lastError, setLastError] = useState<string | null>(null);
+  const [printerReady, setPrinterReady] = useState(false);
   const configRef = useRef(config);
   const recentJobs = useRef<Map<string, number>>(new Map()); // jobId -> timestamp
   const deviceIdRef = useRef<string>('');
 
   useEffect(() => { configRef.current = config; }, [config]);
 
-  // Load config + deviceId on mount
+  // Load config + deviceId on mount, then auto-test printer
   useEffect(() => {
     (async () => {
       const raw = await SecureStore.getItemAsync(STORAGE_KEY);
       if (raw) {
         try {
           const saved = JSON.parse(raw);
-          setConfig({ ...DEFAULT_CONFIG, ...saved });
+          const loaded = { ...DEFAULT_CONFIG, ...saved };
+          setConfig(loaded);
+          // Auto-test in background — don't block startup
+          if (loaded.enabled && loaded.ip) {
+            testTCPConnection(loaded.ip, loaded.port)
+              .then(r => setPrinterReady(r.success))
+              .catch(() => setPrinterReady(false));
+          }
         } catch {}
       }
       let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
@@ -93,6 +103,14 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     setConfig(next);
     configRef.current = next;
     await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(next));
+    // Re-test when IP or enabled changes
+    if (next.enabled && next.ip) {
+      testTCPConnection(next.ip, next.port)
+        .then(r => setPrinterReady(r.success))
+        .catch(() => setPrinterReady(false));
+    } else {
+      setPrinterReady(false);
+    }
   }, []);
 
   const executePrintJob = useCallback(async (job: any) => {
@@ -168,8 +186,9 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   }, [socket, isConnected, executePrintJob]);
 
   const testConnection = useCallback(async () => {
-    const { testTCPConnection } = await import('@/services/printer.service');
-    return testTCPConnection(config.ip, config.port);
+    const result = await testTCPConnection(config.ip, config.port);
+    setPrinterReady(result.success);
+    return result;
   }, [config.ip, config.port]);
 
   const printTestTicket = useCallback(async () => {
@@ -193,7 +212,7 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   const isActive = config.enabled && isConnected && config.ip.length > 0;
 
   return (
-    <PrinterContext.Provider value={{ config, isActive, lastJobStatus, lastError, updateConfig, testConnection, printTestTicket }}>
+    <PrinterContext.Provider value={{ config, isActive, printerReady, lastJobStatus, lastError, updateConfig, testConnection, printTestTicket }}>
       {children}
     </PrinterContext.Provider>
   );

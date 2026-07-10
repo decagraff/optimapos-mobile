@@ -25,9 +25,10 @@ export default function MenuScreen() {
   const { selectedLocationId, selectedLocationName, user } = useAuth();
   const { config } = useServer();
   const cart = useCart();
-  const { config: printerConfig } = useContext(PrinterContext);
+  const { config: printerConfig, printerReady } = useContext(PrinterContext);
   const isStaff = user?.role !== 'CLIENT';
-  const printerMissing = isStaff && (!printerConfig.enabled || !printerConfig.ip);
+  const printerNotConfigured = isStaff && (!printerConfig.enabled || !printerConfig.ip);
+  const printerUnreachable = isStaff && printerConfig.enabled && !!printerConfig.ip && !printerReady;
   const { isFavorite, toggleFavorite } = useFavorites();
   const cartRef = useRef<BottomSheet>(null);
   const { productColumns, isTablet, contentPadding } = useResponsive();
@@ -104,10 +105,16 @@ export default function MenuScreen() {
       </View>
 
       {/* Printer warning banner */}
-      {printerMissing && (
+      {printerNotConfigured && (
         <TouchableOpacity style={styles.printerBanner} onPress={() => router.push('/printer-setup' as any)}>
           <Printer size={16} color="#92400E" />
           <Text style={styles.printerBannerText}>Sin impresora configurada — Toca para configurar</Text>
+        </TouchableOpacity>
+      )}
+      {printerUnreachable && (
+        <TouchableOpacity style={[styles.printerBanner, styles.printerBannerError]} onPress={() => router.push('/printer-setup' as any)}>
+          <Printer size={16} color="#991B1B" />
+          <Text style={[styles.printerBannerText, { color: '#991B1B' }]}>Impresora no responde — Toca para verificar</Text>
         </TouchableOpacity>
       )}
 
@@ -217,6 +224,10 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontWeight: '600',
     flex: 1,
+  },
+  printerBannerError: {
+    backgroundColor: '#FEE2E2',
+    borderBottomColor: '#EF4444',
   },
   fab: {
     position: 'absolute',
