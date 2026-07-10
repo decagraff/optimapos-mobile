@@ -34,8 +34,7 @@ export default function TableSelector({ visible, tables, selectedId, onSelect, o
             return (
               <Pressable
                 style={[styles.tableCard, isSelected && styles.tableSelected, !isFree && styles.tableOccupied]}
-                onPress={() => isFree && onSelect(table)}
-                disabled={!isFree}
+                onPress={() => onSelect(table)}
               >
                 <View style={[styles.tableNumber, isFree ? styles.tableNumberFree : styles.tableNumberOccupied]}>
                   <Text style={styles.tableNumberText}>{table.number}</Text>
@@ -94,7 +93,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   tableSelected: { borderColor: Colors.accent },
-  tableOccupied: { opacity: 0.5 },
+  tableOccupied: { opacity: 0.85 },
   tableNumber: {
     width: 44,
     height: 44,
