@@ -130,8 +130,6 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
       if (isStaff && openOrder && type === 'DINE_IN') {
         // Add items to existing open table order
         await api.addItemsToOrder(openOrder.id, orderData.items);
-      } else if (isStaff) {
-        await api.createOrderPOS(orderData);
       } else {
         await api.createOrder(orderData);
       }
