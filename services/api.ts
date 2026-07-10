@@ -190,6 +190,18 @@ class ApiClient {
     return this.post('/api/orders/pos', data);
   }
 
+  async getOpenTableOrder(tableId: number): Promise<Order | null> {
+    try {
+      return await this.get(`/api/orders/table/${tableId}/open`);
+    } catch {
+      return null;
+    }
+  }
+
+  async addItemsToOrder(orderId: number, items: any[]): Promise<{ order: Order }> {
+    return this.post(`/api/orders/${orderId}/items`, { items });
+  }
+
   async updateOrderStatus(orderId: number, status: string): Promise<Order> {
     return this.patch(`/api/orders/${orderId}/status`, { status });
   }

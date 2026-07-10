@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput, ScrollView } from 'react-native';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
-import { X, UtensilsCrossed, ShoppingBag, Truck, MapPin, Phone, User as UserIcon, Banknote, CreditCard } from 'lucide-react-native';
+import { X, UtensilsCrossed, ShoppingBag, Truck, MapPin, Phone, User as UserIcon, Banknote, CreditCard, AlertCircle } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
 import { api } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
-import type { Table } from '@/types';
+import type { Table, Order } from '@/types';
 import TableSelector from './TableSelector';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'YAPE' | 'PLIN';
@@ -29,6 +29,7 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
   const cart = useCart();
   const [tables, setTables] = useState<Table[]>([]);
   const [showTables, setShowTables] = useState(false);
+  const [openOrder, setOpenOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -62,6 +63,7 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
       setDeliveryPhone(user?.phone || '');
       setDeliveryName(user?.name || '');
       setAmountReceived('');
+      setOpenOrder(null);
       setError('');
     }
   }, [visible, user]);
@@ -125,7 +127,10 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
         }
       }
 
-      if (isStaff) {
+      if (isStaff && openOrder && type === 'DINE_IN') {
+        // Add items to existing open table order
+        await api.addItemsToOrder(openOrder.id, orderData.items);
+      } else if (isStaff) {
         await api.createOrderPOS(orderData);
       } else {
         await api.createOrder(orderData);
@@ -140,10 +145,14 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
     }
   };
 
-  const handleTableSelect = (table: Table) => {
+  const handleTableSelect = async (table: Table) => {
     cart.setTable(table.id, table.name);
     setShowTables(false);
     setError('');
+    setOpenOrder(null);
+    // Check if this table already has an open order
+    const existing = await api.getOpenTableOrder(table.id);
+    if (existing) setOpenOrder(existing);
   };
 
   const orderTypes: { key: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'; label: string; icon: any }[] = isClient
@@ -199,6 +208,14 @@ export default function CheckoutModal({ visible, onClose, onSuccess }: Props) {
                   {cart.tableName || 'Seleccionar mesa'}
                 </Text>
               </Pressable>
+              {openOrder && (
+                <View style={styles.openOrderBanner}>
+                  <AlertCircle size={16} color="#92400E" />
+                  <Text style={styles.openOrderText}>
+                    Mesa ocupada — se agregarán los items al pedido #{openOrder.code}
+                  </Text>
+                </View>
+              )}
             </>
           )}
 
@@ -380,4 +397,9 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: FontSizes.xxl, fontWeight: '700', color: Colors.accent },
   error: { color: Colors.danger, fontSize: FontSizes.sm, textAlign: 'center', marginTop: Spacing.lg },
   footer: { padding: Spacing.xl, paddingBottom: Spacing.xxxl },
+  openOrderBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: '#FEF3C7', borderRadius: Radii.sm, padding: Spacing.md, marginTop: Spacing.sm,
+  },
+  openOrderText: { fontSize: FontSizes.sm, color: '#92400E', fontWeight: '600', flex: 1 },
 });

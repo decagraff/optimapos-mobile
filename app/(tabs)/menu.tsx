@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
+import { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
-import { ShoppingCart } from 'lucide-react-native';
+import { ShoppingCart, Printer } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useServer } from '@/hooks/useServer';
 import { useCart } from '@/hooks/useCart';
+import { PrinterContext } from '@/context/PrinterContext';
 import { useFavorites } from '@/hooks/useFavorites';
 import { api } from '@/services/api';
 import CategoryChips from '@/components/catalog/CategoryChips';
@@ -19,9 +21,13 @@ import { useResponsive } from '@/hooks/useResponsive';
 import type { Product, Category, CartItem, AddonGroup } from '@/types';
 
 export default function MenuScreen() {
-  const { selectedLocationId, selectedLocationName } = useAuth();
+  const router = useRouter();
+  const { selectedLocationId, selectedLocationName, user } = useAuth();
   const { config } = useServer();
   const cart = useCart();
+  const { config: printerConfig } = useContext(PrinterContext);
+  const isStaff = user?.role !== 'CLIENT';
+  const printerMissing = isStaff && (!printerConfig.enabled || !printerConfig.ip);
   const { isFavorite, toggleFavorite } = useFavorites();
   const cartRef = useRef<BottomSheet>(null);
   const { productColumns, isTablet, contentPadding } = useResponsive();
@@ -96,6 +102,14 @@ export default function MenuScreen() {
           {selectedLocationName && <Text style={styles.headerSub}>{selectedLocationName}</Text>}
         </View>
       </View>
+
+      {/* Printer warning banner */}
+      {printerMissing && (
+        <TouchableOpacity style={styles.printerBanner} onPress={() => router.push('/printer-setup' as any)}>
+          <Printer size={16} color="#92400E" />
+          <Text style={styles.printerBannerText}>Sin impresora configurada — Toca para configurar</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Categories */}
       <CategoryChips
@@ -188,6 +202,22 @@ const styles = StyleSheet.create({
   grid: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 100 },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { fontSize: FontSizes.md, color: Colors.textTertiary },
+  printerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: '#FEF3C7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F59E0B',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  printerBannerText: {
+    fontSize: FontSizes.sm,
+    color: '#92400E',
+    fontWeight: '600',
+    flex: 1,
+  },
   fab: {
     position: 'absolute',
     bottom: 24,
