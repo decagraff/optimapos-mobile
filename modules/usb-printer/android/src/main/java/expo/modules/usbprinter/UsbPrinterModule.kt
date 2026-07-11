@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
@@ -17,15 +18,17 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-private const val ACTION_USB_PERMISSION = "net.decatron.optimapos.USB_PERMISSION"
-private const val TRANSFER_TIMEOUT_MS = 10_000
+private const val ACTION_USB_PERMISSION  = "net.decatron.optimapos.USB_PERMISSION"
+private const val TRANSFER_TIMEOUT_MS    = 5_000
 private const val PERMISSION_TIMEOUT_SEC = 60L
+private const val CHUNK_SIZE             = 16_384 // 16 KB por transferencia
 
 class UsbPrinterModule : Module() {
 
   private var activeConnection: UsbDeviceConnection? = null
-  private var activeEndpoint: UsbEndpoint? = null
-  private var activeInterface: UsbInterface? = null
+  private var activeEndpoint:   UsbEndpoint?         = null
+  private var activeInterface:  UsbInterface?         = null
+  private var connectDebugInfo: String                = ""
 
   private val usbManager: UsbManager?
     get() = appContext.reactContext?.getSystemService(Context.USB_SERVICE) as? UsbManager
@@ -40,14 +43,13 @@ class UsbPrinterModule : Module() {
         mapOf(
           "vendorId"    to dev.vendorId,
           "productId"   to dev.productId,
-          "deviceName"  to (dev.deviceName ?: ""),
+          "deviceName"  to (dev.deviceName  ?: ""),
           "productName" to (dev.productName ?: "Impresora USB")
         )
       }
     }
 
     // ─── connect ───────────────────────────────────────────────────────────────
-    // Corre en background thread — puede bloquear esperando el permiso del usuario.
     AsyncFunction("connect") { vendorId: Int, productId: Int ->
       val mgr = usbManager
         ?: return@AsyncFunction mapOf("success" to false, "error" to "USB Manager no disponible")
@@ -61,9 +63,8 @@ class UsbPrinterModule : Module() {
         "error"   to "Dispositivo no encontrado. Verifica que el cable esté conectado."
       )
 
-      // Si ya tiene permiso, conectar directo
       if (!mgr.hasPermission(device)) {
-        val latch = CountDownLatch(1)
+        val latch   = CountDownLatch(1)
         var granted = false
 
         val receiver = object : BroadcastReceiver() {
@@ -87,10 +88,9 @@ class UsbPrinterModule : Module() {
 
         mgr.requestPermission(device, pi)
 
-        // Esperar respuesta del usuario (máx 60 segundos)
         if (!latch.await(PERMISSION_TIMEOUT_SEC, TimeUnit.SECONDS)) {
           runCatching { ctx.unregisterReceiver(receiver) }
-          return@AsyncFunction mapOf("success" to false, "error" to "Timeout: el usuario no respondió el permiso USB")
+          return@AsyncFunction mapOf("success" to false, "error" to "Timeout: usuario no respondió el permiso USB")
         }
 
         if (!granted) {
@@ -106,18 +106,47 @@ class UsbPrinterModule : Module() {
       val conn = activeConnection
       val ep   = activeEndpoint
       if (conn == null || ep == null) {
-        return@AsyncFunction mapOf("success" to false, "error" to "No hay impresora USB conectada")
+        return@AsyncFunction mapOf(
+          "success" to false,
+          "error"   to "No hay impresora USB conectada. Llama a connect() primero.",
+          "debug"   to connectDebugInfo
+        )
       }
+
       try {
-        val bytes   = Base64.decode(base64Data, Base64.DEFAULT)
-        val written = conn.bulkTransfer(ep, bytes, bytes.size, TRANSFER_TIMEOUT_MS)
-        if (written >= 0) {
-          mapOf("success" to true, "bytesWritten" to written)
-        } else {
-          mapOf("success" to false, "error" to "Transferencia fallida (código USB: $written)")
+        val bytes      = Base64.decode(base64Data, Base64.DEFAULT)
+        val totalBytes = bytes.size
+        var offset     = 0
+        var chunks     = 0
+
+        while (offset < totalBytes) {
+          val end     = minOf(offset + CHUNK_SIZE, totalBytes)
+          val chunk   = bytes.copyOfRange(offset, end)
+          val written = conn.bulkTransfer(ep, chunk, chunk.size, TRANSFER_TIMEOUT_MS)
+
+          if (written < 0) {
+            return@AsyncFunction mapOf(
+              "success" to false,
+              "error"   to "bulkTransfer falló en chunk $chunks (offset $offset). Código: $written",
+              "debug"   to "totalBytes=$totalBytes sent=$offset chunks=$chunks | $connectDebugInfo"
+            )
+          }
+          offset += written
+          chunks++
         }
+
+        mapOf(
+          "success"     to true,
+          "bytesWritten" to offset,
+          "chunks"      to chunks,
+          "debug"       to connectDebugInfo
+        )
       } catch (e: Exception) {
-        mapOf("success" to false, "error" to (e.message ?: "Error de transferencia USB"))
+        mapOf(
+          "success" to false,
+          "error"   to (e.message ?: "Error de transferencia USB"),
+          "debug"   to connectDebugInfo
+        )
       }
     }
 
@@ -132,31 +161,66 @@ class UsbPrinterModule : Module() {
     }
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-  private fun openDevice(mgr: UsbManager, device: android.hardware.usb.UsbDevice): Map<String, Any> {
+  // ─── openDevice ──────────────────────────────────────────────────────────────
+  private fun openDevice(mgr: UsbManager, device: UsbDevice): Map<String, Any> {
     doDisconnect()
 
     val conn = mgr.openDevice(device)
       ?: return mapOf("success" to false, "error" to "No se pudo abrir el dispositivo USB")
 
-    for (i in 0 until device.interfaceCount) {
-      val intf = device.getInterface(i)
-      for (j in 0 until intf.endpointCount) {
-        val ep = intf.getEndpoint(j)
-        if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.direction == UsbConstants.USB_DIR_OUT) {
-          if (conn.claimInterface(intf, true)) {
-            activeConnection = conn
-            activeInterface  = intf
-            activeEndpoint   = ep
-            return mapOf("success" to true)
-          }
-        }
+    // Construir resumen de todas las interfaces para debug
+    val ifacesSummary = buildString {
+      for (i in 0 until device.interfaceCount) {
+        val intf = device.getInterface(i)
+        append("IF[$i] class=${intf.interfaceClass} ep=${intf.endpointCount}; ")
       }
     }
 
-    conn.close()
-    return mapOf("success" to false, "error" to "No se encontró endpoint de impresión. ¿Es una impresora ESC/POS compatible?")
+    // 1ª pasada: buscar interfaz USB Printer Class (7)
+    val result = tryClaimBulkOut(conn, device, filterClass = 7)
+      ?: tryClaimBulkOut(conn, device, filterClass = null) // fallback: cualquier clase
+
+    if (result == null) {
+      conn.close()
+      return mapOf(
+        "success" to false,
+        "error"   to "No se encontró endpoint bulk-out compatible",
+        "debug"   to ifacesSummary
+      )
+    }
+
+    val (intf, ep) = result
+    activeConnection = conn
+    activeInterface  = intf
+    activeEndpoint   = ep
+    connectDebugInfo = "IF[${intf.id}] class=${intf.interfaceClass} ep#${ep.endpointNumber} addr=0x${ep.address.toString(16)} | $ifacesSummary"
+
+    return mapOf(
+      "success"        to true,
+      "interfaceClass" to intf.interfaceClass,
+      "interfaceId"    to intf.id,
+      "endpointAddr"   to ep.address,
+      "debug"          to connectDebugInfo
+    )
+  }
+
+  /** Busca en las interfaces del dispositivo un endpoint bulk-out, opcionalmente filtrado por clase. */
+  private fun tryClaimBulkOut(
+    conn: UsbDeviceConnection,
+    device: UsbDevice,
+    filterClass: Int?
+  ): Pair<UsbInterface, UsbEndpoint>? {
+    for (i in 0 until device.interfaceCount) {
+      val intf = device.getInterface(i)
+      if (filterClass != null && intf.interfaceClass != filterClass) continue
+      for (j in 0 until intf.endpointCount) {
+        val ep = intf.getEndpoint(j)
+        if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.direction == UsbConstants.USB_DIR_OUT) {
+          if (conn.claimInterface(intf, true)) return Pair(intf, ep)
+        }
+      }
+    }
+    return null
   }
 
   private fun doDisconnect() {
@@ -167,5 +231,6 @@ class UsbPrinterModule : Module() {
     activeConnection = null
     activeInterface  = null
     activeEndpoint   = null
+    connectDebugInfo = ""
   }
 }

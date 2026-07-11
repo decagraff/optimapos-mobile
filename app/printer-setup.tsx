@@ -65,6 +65,7 @@ export default function PrinterSetupScreen() {
   const [showPrinterPicker, setShowPrinterPicker] = useState(false);
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
   const [scanningUsb, setScanningUsb] = useState(false);
+  const [usbDebug, setUsbDebug] = useState<{ ok: boolean; msg: string; detail?: string } | null>(null);
 
   const canReadPrinters = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
@@ -126,28 +127,44 @@ export default function PrinterSetupScreen() {
     });
   };
 
+  const showDebug = (ok: boolean, msg: string, detail?: string) => {
+    setUsbDebug({ ok, msg, detail });
+    setTimeout(() => setUsbDebug(null), 12000);
+  };
+
   const handleTestConnection = async () => {
-    if (!config.ip) { Alert.alert('Sin IP', 'Ingresa la IP de la impresora primero.'); return; }
+    if (config.connectionType !== 'usb' && !config.ip) {
+      Alert.alert('Sin IP', 'Ingresa la IP de la impresora primero.'); return;
+    }
     setTestingConn(true);
     try {
       const result = await testConnection();
-      if (result.success) {
-        Alert.alert('Conexión exitosa', `Impresora en ${config.ip}:${config.port} responde OK.`);
+      if (config.connectionType === 'usb') {
+        const r = result as any;
+        showDebug(result.success, result.success ? 'USB conectado OK' : (result.error || 'Error'), r.debug);
       } else {
-        Alert.alert('Sin conexión', result.error || 'No se pudo conectar.');
+        if (result.success) Alert.alert('Conexión exitosa', `Impresora en ${config.ip}:${config.port} responde OK.`);
+        else Alert.alert('Sin conexión', result.error || 'No se pudo conectar.');
       }
     } finally { setTestingConn(false); }
   };
 
   const handlePrintTest = async () => {
-    if (!config.ip) { Alert.alert('Sin IP', 'Ingresa la IP de la impresora primero.'); return; }
+    if (config.connectionType !== 'usb' && !config.ip) {
+      Alert.alert('Sin IP', 'Ingresa la IP de la impresora primero.'); return;
+    }
     setTestingPrint(true);
     try {
       const result = await printTestTicket();
-      if (result.success) {
-        Alert.alert('Impresión OK', 'Ticket de prueba enviado correctamente.');
+      if (config.connectionType === 'usb') {
+        const r = result as any;
+        const detail = r.debug
+          ? `${r.debug}${r.bytesWritten != null ? ` | bytes=${r.bytesWritten} chunks=${r.chunks}` : ''}`
+          : (r.bytesWritten != null ? `bytes=${r.bytesWritten} chunks=${r.chunks}` : undefined);
+        showDebug(result.success, result.success ? `Enviado OK (${r.bytesWritten ?? '?'} bytes)` : (result.error || 'Error'), detail);
       } else {
-        Alert.alert('Error de impresión', result.error || 'No se pudo imprimir.');
+        if (result.success) Alert.alert('Impresión OK', 'Ticket de prueba enviado correctamente.');
+        else Alert.alert('Error de impresión', result.error || 'No se pudo imprimir.');
       }
     } finally { setTestingPrint(false); }
   };
@@ -166,6 +183,14 @@ export default function PrinterSetupScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
+      {/* Debug banner — temporal, desaparece solo */}
+      {usbDebug && (
+        <View style={[styles.debugBanner, usbDebug.ok ? styles.debugOk : styles.debugErr]}>
+          <Text style={styles.debugTitle}>{usbDebug.ok ? '✓' : '✗'} {usbDebug.msg}</Text>
+          {usbDebug.detail ? <Text style={styles.debugDetail}>{usbDebug.detail}</Text> : null}
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -466,4 +491,10 @@ const styles = StyleSheet.create({
 
   usbSelected: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.successLight, padding: Spacing.sm, borderRadius: Radii.sm },
   usbSelectedText: { fontSize: FontSizes.sm, color: Colors.success, fontWeight: '600', flex: 1 },
+
+  debugBanner: { borderRadius: Radii.sm, padding: Spacing.md, gap: 4, marginBottom: Spacing.xs },
+  debugOk: { backgroundColor: '#14532d' },
+  debugErr: { backgroundColor: '#450a0a' },
+  debugTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: '#fff' },
+  debugDetail: { fontSize: FontSizes.xs, color: '#ccc', fontFamily: 'monospace' as any },
 });
