@@ -1,4 +1,7 @@
 import TcpSocket from 'react-native-tcp-socket';
+import { usbConnect, usbSendBytes, usbIsConnected, usbListDevices, usbDisconnect } from '../modules/usb-printer';
+export { usbListDevices, usbConnect, usbDisconnect, usbIsConnected };
+export type { UsbDevice } from '../modules/usb-printer';
 
 export interface PrinterConfig {
   ip: string;
@@ -73,4 +76,21 @@ export async function testTCPConnection(
       finish({ success: false, error: err.message });
     });
   });
+}
+
+/**
+ * Envía bytes ESC/POS a una impresora USB OTG.
+ * Si la conexión previa sigue activa la reutiliza; si no, reconecta primero.
+ */
+export async function printViaUSB(
+  vendorId: number,
+  productId: number,
+  data: number[]
+): Promise<{ success: boolean; error?: string }> {
+  const connected = await usbIsConnected();
+  if (!connected) {
+    const connectResult = await usbConnect(vendorId, productId);
+    if (!connectResult.success) return connectResult;
+  }
+  return usbSendBytes(data);
 }

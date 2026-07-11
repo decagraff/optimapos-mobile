@@ -15,12 +15,14 @@ import { Colors, Spacing, FontSizes, Radii } from '@/constants/theme';
 import { usePrinter } from '@/context/PrinterContext';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
+import { usbListDevices } from '@/services/printer.service';
+import type { UsbDevice } from '@/services/printer.service';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import {
   Printer, Wifi, WifiOff, CheckCircle, XCircle,
-  ChevronLeft, Zap, RefreshCw, ChevronDown,
+  ChevronLeft, Zap, RefreshCw, ChevronDown, Usb,
 } from 'lucide-react-native';
 
 const EVENT_LABELS: Record<string, string> = {
@@ -61,6 +63,8 @@ export default function PrinterSetupScreen() {
   const [loadingPrinters, setLoadingPrinters] = useState(false);
   const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
   const [showPrinterPicker, setShowPrinterPicker] = useState(false);
+  const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
+  const [scanningUsb, setScanningUsb] = useState(false);
 
   const canReadPrinters = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
@@ -86,6 +90,28 @@ export default function PrinterSetupScreen() {
     } finally {
       setLoadingPrinters(false);
     }
+  };
+
+  const scanUsbDevices = async () => {
+    setScanningUsb(true);
+    try {
+      const devices = await usbListDevices();
+      setUsbDevices(devices);
+      if (devices.length === 0) Alert.alert('Sin dispositivos', 'No se detectó ningún dispositivo USB. Verifica que el cable esté conectado.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo escanear USB');
+    } finally {
+      setScanningUsb(false);
+    }
+  };
+
+  const handleSelectUsbDevice = async (device: UsbDevice) => {
+    await updateConfig({
+      connectionType: 'usb',
+      usbVendorId: device.vendorId,
+      usbProductId: device.productId,
+      usbProductName: device.productName || device.deviceName,
+    });
   };
 
   const handleSelectPrinter = async (printer: BackendPrinter) => {
@@ -158,10 +184,17 @@ export default function PrinterSetupScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.statusTitle}>{isActive ? 'Bridge activo' : 'Bridge inactivo'}</Text>
             <Text style={styles.statusSub}>
-              {isActive ? `Escuchando en ${config.ip}:${config.port}`
-                : config.enabled && !config.ip ? 'Falta configurar la IP'
-                : config.enabled ? 'Sin conexión al servidor'
-                : 'Activa el toggle para habilitar'}
+              {isActive
+                ? config.connectionType === 'usb'
+                  ? `USB: ${config.usbProductName || 'Impresora conectada'}`
+                  : `Escuchando en ${config.ip}:${config.port}`
+                : config.enabled && config.connectionType === 'usb' && !config.usbVendorId
+                  ? 'Falta seleccionar dispositivo USB'
+                  : config.enabled && config.connectionType !== 'usb' && !config.ip
+                    ? 'Falta configurar la IP'
+                    : config.enabled
+                      ? 'Sin conexión al servidor'
+                      : 'Activa el toggle para habilitar'}
             </Text>
           </View>
           <Badge label={statusLabel} color={statusColor} />
@@ -198,8 +231,101 @@ export default function PrinterSetupScreen() {
 
       {config.enabled && (
         <>
-          {/* Printer selector — Admin/Manager only */}
-          {canReadPrinters && (
+          {/* Tipo de conexión */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Tipo de conexión</Text>
+            <View style={styles.connTypeRow}>
+              <Pressable
+                style={[styles.connTypeBtn, config.connectionType !== 'usb' && styles.connTypeBtnActive]}
+                onPress={() => updateConfig({ connectionType: 'tcp' })}
+              >
+                <Wifi size={16} color={config.connectionType !== 'usb' ? Colors.accent : Colors.textTertiary} />
+                <Text style={[styles.connTypeLabel, config.connectionType !== 'usb' && styles.connTypeLabelActive]}>
+                  WiFi / TCP
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.connTypeBtn, config.connectionType === 'usb' && styles.connTypeBtnActive]}
+                onPress={() => updateConfig({ connectionType: 'usb' })}
+              >
+                <Usb size={16} color={config.connectionType === 'usb' ? Colors.accent : Colors.textTertiary} />
+                <Text style={[styles.connTypeLabel, config.connectionType === 'usb' && styles.connTypeLabelActive]}>
+                  USB OTG
+                </Text>
+              </Pressable>
+            </View>
+          </Card>
+
+          {/* Sección USB */}
+          {config.connectionType === 'usb' && (
+            <Card style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Dispositivo USB</Text>
+                  <Text style={styles.sectionSub}>Conecta la impresora por cable USB-C a USB-B</Text>
+                </View>
+                <Pressable onPress={scanUsbDevices} style={styles.refreshBtn}>
+                  {scanningUsb
+                    ? <ActivityIndicator size="small" color={Colors.accent} />
+                    : <RefreshCw size={16} color={Colors.accent} />}
+                </Pressable>
+              </View>
+
+              {config.usbVendorId ? (
+                <View style={styles.usbSelected}>
+                  <Usb size={16} color={Colors.success} />
+                  <Text style={styles.usbSelectedText}>
+                    {config.usbProductName || `VID:${config.usbVendorId} PID:${config.usbProductId}`}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.sectionSub}>Sin impresora USB configurada. Presiona el botón para escanear.</Text>
+              )}
+
+              {usbDevices.length > 0 && (
+                <View style={styles.printerList}>
+                  {usbDevices.map((d, idx) => (
+                    <Pressable
+                      key={`${d.vendorId}-${d.productId}-${idx}`}
+                      style={styles.printerItem}
+                      onPress={() => handleSelectUsbDevice(d)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.printerName}>{d.productName || 'Dispositivo USB'}</Text>
+                        <Text style={styles.printerAddr}>VID: 0x{d.vendorId.toString(16).toUpperCase().padStart(4, '0')} · PID: 0x{d.productId.toString(16).toUpperCase().padStart(4, '0')}</Text>
+                        <Text style={styles.printerAddr}>{d.deviceName}</Text>
+                      </View>
+                      {config.usbVendorId === d.vendorId && config.usbProductId === d.productId && (
+                        <CheckCircle size={16} color={Colors.success} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.actions}>
+                <Button
+                  title={scanningUsb ? 'Escaneando...' : 'Escanear dispositivos USB'}
+                  onPress={scanUsbDevices}
+                  variant="outline"
+                  fullWidth
+                  icon={scanningUsb ? undefined : Usb}
+                  disabled={scanningUsb}
+                />
+                <Button
+                  title={testingPrint ? 'Imprimiendo...' : 'Ticket de prueba (USB)'}
+                  onPress={handlePrintTest}
+                  variant="secondary"
+                  fullWidth
+                  icon={testingPrint ? undefined : Zap}
+                  disabled={testingPrint || !config.usbVendorId}
+                />
+              </View>
+            </Card>
+          )}
+
+          {/* Printer selector (TCP) — Admin/Manager only */}
+          {config.connectionType !== 'usb' && canReadPrinters && (
             <Card style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <View style={{ flex: 1 }}>
@@ -243,8 +369,8 @@ export default function PrinterSetupScreen() {
             </Card>
           )}
 
-          {/* Connection — Admin/Manager: IP auto-filled from printer selector; others: manual */}
-          <Card style={styles.section}>
+          {/* Connection TCP — solo en modo WiFi */}
+          {config.connectionType !== 'usb' && <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Conexión TCP</Text>
             {!canReadPrinters && (
               <>
@@ -285,7 +411,7 @@ export default function PrinterSetupScreen() {
               <Button title={testingPrint ? 'Imprimiendo...' : 'Ticket de prueba'} onPress={handlePrintTest}
                 variant="secondary" fullWidth icon={testingPrint ? undefined : Zap} disabled={testingConn || testingPrint} />
             </View>
-          </Card>
+          </Card>}
         </>
       )}
     </ScrollView>
@@ -331,4 +457,13 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: Colors.inputBorder, borderRadius: Radii.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: FontSizes.md, color: Colors.text, backgroundColor: Colors.inputBg },
 
   actions: { gap: Spacing.md, marginTop: Spacing.sm },
+
+  connTypeRow: { flexDirection: 'row', gap: Spacing.sm },
+  connTypeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, paddingVertical: Spacing.sm, borderRadius: Radii.sm, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.inputBg },
+  connTypeBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accent + '15' },
+  connTypeLabel: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textTertiary },
+  connTypeLabelActive: { color: Colors.accent },
+
+  usbSelected: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.successLight, padding: Spacing.sm, borderRadius: Radii.sm },
+  usbSelectedText: { fontSize: FontSizes.sm, color: Colors.success, fontWeight: '600', flex: 1 },
 });

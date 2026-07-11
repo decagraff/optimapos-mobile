@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import type { ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { SocketContext } from './SocketContext';
-import { printViaTCP, testTCPConnection } from '@/services/printer.service';
+import { printViaTCP, printViaUSB, testTCPConnection } from '@/services/printer.service';
 import { renderPrintJobBinary } from '@/services/escpos-binary';
 
 const STORAGE_KEY = 'printer_config';
@@ -22,8 +22,14 @@ function generateDeviceId(): string {
 
 export interface PrinterBridgeConfig {
   enabled: boolean;
+  connectionType: 'tcp' | 'usb';
+  // TCP
   ip: string;
   port: number;
+  // USB
+  usbVendorId?: number;
+  usbProductId?: number;
+  usbProductName?: string;
   copies: number;
   events: string[];
   orderTypes: string[]; // empty = all types
@@ -31,6 +37,7 @@ export interface PrinterBridgeConfig {
 
 const DEFAULT_CONFIG: PrinterBridgeConfig = {
   enabled: false,
+  connectionType: 'tcp',
   ip: '',
   port: 9100,
   copies: 1,
@@ -82,10 +89,15 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
           const loaded = { ...DEFAULT_CONFIG, ...saved };
           setConfig(loaded);
           // Auto-test in background — don't block startup
-          if (loaded.enabled && loaded.ip) {
-            testTCPConnection(loaded.ip, loaded.port)
-              .then(r => setPrinterReady(r.success))
-              .catch(() => setPrinterReady(false));
+          if (loaded.enabled) {
+            if (loaded.connectionType === 'usb' && loaded.usbVendorId) {
+              // USB: we can't test without prompting — just mark ready optimistically
+              setPrinterReady(true);
+            } else if (loaded.ip) {
+              testTCPConnection(loaded.ip, loaded.port)
+                .then(r => setPrinterReady(r.success))
+                .catch(() => setPrinterReady(false));
+            }
           }
         } catch {}
       }
@@ -103,11 +115,17 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     setConfig(next);
     configRef.current = next;
     await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(next));
-    // Re-test when IP or enabled changes
-    if (next.enabled && next.ip) {
-      testTCPConnection(next.ip, next.port)
-        .then(r => setPrinterReady(r.success))
-        .catch(() => setPrinterReady(false));
+    // Re-test when config changes
+    if (next.enabled) {
+      if (next.connectionType === 'usb' && next.usbVendorId) {
+        setPrinterReady(true);
+      } else if (next.connectionType === 'tcp' && next.ip) {
+        testTCPConnection(next.ip, next.port)
+          .then(r => setPrinterReady(r.success))
+          .catch(() => setPrinterReady(false));
+      } else {
+        setPrinterReady(false);
+      }
     } else {
       setPrinterReady(false);
     }
@@ -115,10 +133,13 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
 
   const executePrintJob = useCallback(async (job: any) => {
     const cfg = configRef.current;
-    if (!cfg.enabled || !cfg.ip) return;
+    const isTCP = cfg.connectionType !== 'usb';
+    if (!cfg.enabled) return;
+    if (isTCP && !cfg.ip) return;
+    if (!isTCP && !cfg.usbVendorId) return;
 
-    // Filter by printer IP — only skip if job has an address AND it doesn't match ours
-    if (cfg.ip && job.printer?.address && job.printer.address !== cfg.ip) return;
+    // Filter by printer IP (TCP only) — skip if job targets a different printer
+    if (isTCP && cfg.ip && job.printer?.address && job.printer.address !== cfg.ip) return;
 
     // Deduplicate — skip if we processed this jobId recently
     const now = Date.now();
@@ -154,7 +175,9 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
       for (let copy = 0; copy < copies; copy++) {
         let success = false;
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-          const result = await printViaTCP({ ip: cfg.ip, port: cfg.port }, data);
+          const result = isTCP
+              ? await printViaTCP({ ip: cfg.ip, port: cfg.port }, data)
+              : await printViaUSB(cfg.usbVendorId!, cfg.usbProductId!, data);
           if (result.success) { success = true; break; }
           lastErr = result.error || 'Error desconocido';
           if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, RETRY_DELAY));
@@ -186,10 +209,18 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
   }, [socket, isConnected, executePrintJob]);
 
   const testConnection = useCallback(async () => {
+    if (config.connectionType === 'usb') {
+      if (!config.usbVendorId) return { success: false, error: 'Sin dispositivo USB configurado' };
+      // Intentar conectar (sin enviar bytes) — verifica que el dispositivo responde
+      const { usbConnect: connectUsb } = await import('@/services/printer.service');
+      const result = await connectUsb(config.usbVendorId, config.usbProductId!);
+      setPrinterReady(result.success);
+      return result;
+    }
     const result = await testTCPConnection(config.ip, config.port);
     setPrinterReady(result.success);
     return result;
-  }, [config.ip, config.port]);
+  }, [config]);
 
   const printTestTicket = useCallback(async () => {
     const ESC = 0x1B; const GS = 0x1D; const LF = 0x0A;
@@ -206,10 +237,19 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
       LF, LF, LF,
       GS, 0x56, 0x01,
     ];
+    if (config.connectionType === 'usb') {
+      if (!config.usbVendorId) return { success: false, error: 'Sin dispositivo USB configurado' };
+      return printViaUSB(config.usbVendorId, config.usbProductId!, bytes);
+    }
     return printViaTCP({ ip: config.ip, port: config.port }, bytes);
-  }, [config.ip, config.port]);
+  }, [config]);
 
-  const isActive = config.enabled && isConnected && config.ip.length > 0;
+  const isActive =
+    config.enabled &&
+    isConnected &&
+    (config.connectionType === 'usb'
+      ? !!config.usbVendorId
+      : config.ip.length > 0);
 
   return (
     <PrinterContext.Provider value={{ config, isActive, printerReady, lastJobStatus, lastError, updateConfig, testConnection, printTestTicket }}>
