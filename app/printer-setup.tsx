@@ -6,6 +6,7 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Share,
   TextInput,
   Pressable,
   ActivityIndicator,
@@ -186,8 +187,18 @@ export default function PrinterSetupScreen() {
       {/* Debug banner — temporal, desaparece solo */}
       {usbDebug && (
         <View style={[styles.debugBanner, usbDebug.ok ? styles.debugOk : styles.debugErr]}>
-          <Text style={styles.debugTitle}>{usbDebug.ok ? '✓' : '✗'} {usbDebug.msg}</Text>
-          {usbDebug.detail ? <Text style={styles.debugDetail}>{usbDebug.detail}</Text> : null}
+          <View style={styles.debugHeader}>
+            <Text style={styles.debugTitle}>{usbDebug.ok ? '✓' : '✗'} {usbDebug.msg}</Text>
+            <Pressable
+              onPress={() => Share.share({ message: [usbDebug.msg, usbDebug.detail].filter(Boolean).join('\n') })}
+              style={styles.debugCopyBtn}
+            >
+              <Text style={styles.debugCopyLabel}>Copiar</Text>
+            </Pressable>
+          </View>
+          {usbDebug.detail ? (
+            <Text style={styles.debugDetail} selectable>{usbDebug.detail}</Text>
+          ) : null}
         </View>
       )}
 
@@ -495,6 +506,9 @@ const styles = StyleSheet.create({
   debugBanner: { borderRadius: Radii.sm, padding: Spacing.md, gap: 4, marginBottom: Spacing.xs },
   debugOk: { backgroundColor: '#14532d' },
   debugErr: { backgroundColor: '#450a0a' },
-  debugTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: '#fff' },
+  debugHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  debugTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: '#fff', flex: 1 },
   debugDetail: { fontSize: FontSizes.xs, color: '#ccc', fontFamily: 'monospace' as any },
+  debugCopyBtn: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radii.xs },
+  debugCopyLabel: { fontSize: FontSizes.xs, color: '#fff', fontWeight: '600' },
 });

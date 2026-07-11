@@ -75,9 +75,8 @@ class UsbPrinterModule : Module() {
           }
         }
 
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-          PendingIntent.FLAG_MUTABLE else 0
-        val pi = PendingIntent.getBroadcast(ctx, 0, Intent(ACTION_USB_PERMISSION), flags)
+        // FLAG_IMMUTABLE requerido en Android 14+ (API 34) para intents implícitos
+        val pi = PendingIntent.getBroadcast(ctx, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
           ctx.registerReceiver(receiver, IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED)
