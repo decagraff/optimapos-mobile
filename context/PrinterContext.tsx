@@ -30,6 +30,8 @@ export interface PrinterBridgeConfig {
   usbVendorId?: number;
   usbProductId?: number;
   usbProductName?: string;
+  usbPrinterId?: number;   // ID de la impresora del sistema vinculada
+  usbPrinterName?: string; // nombre para mostrar
   copies: number;
   events: string[];
   orderTypes: string[]; // empty = all types
@@ -136,10 +138,11 @@ export function PrinterProvider({ children }: { children: ReactNode }) {
     const isTCP = cfg.connectionType !== 'usb';
     if (!cfg.enabled) return;
     if (isTCP && !cfg.ip) return;
-    if (!isTCP && !cfg.usbVendorId) return;
+    if (!isTCP && (!cfg.usbVendorId || !cfg.usbPrinterId)) return;
 
-    // Filter by printer IP (TCP only) — skip if job targets a different printer
+    // Filtrar por impresora — solo procesar jobs que correspondan a este dispositivo
     if (isTCP && cfg.ip && job.printer?.address && job.printer.address !== cfg.ip) return;
+    if (!isTCP && cfg.usbPrinterId && job.printer?.id && job.printer.id !== cfg.usbPrinterId) return;
 
     // Deduplicate — skip if we processed this jobId recently
     const now = Date.now();

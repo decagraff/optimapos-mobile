@@ -119,13 +119,16 @@ export default function PrinterSetupScreen() {
   const handleSelectPrinter = async (printer: BackendPrinter) => {
     setSelectedPrinterId(printer.id);
     setShowPrinterPicker(false);
-    await updateConfig({
-      ip: printer.address,
-      port: printer.port || 9100,
+    const common = {
       events: printer.events.length > 0 ? printer.events : ALL_EVENTS,
       orderTypes: printer.orderTypes || [],
       copies: printer.copies || 1,
-    });
+    };
+    if (config.connectionType === 'usb') {
+      await updateConfig({ ...common, usbPrinterId: printer.id, usbPrinterName: printer.name });
+    } else {
+      await updateConfig({ ...common, ip: printer.address, port: printer.port || 9100 });
+    }
   };
 
   const showDebug = (ok: boolean, msg: string, detail?: string) => {
@@ -224,8 +227,8 @@ export default function PrinterSetupScreen() {
                 ? config.connectionType === 'usb'
                   ? `USB: ${config.usbProductName || 'Impresora conectada'}`
                   : `Escuchando en ${config.ip}:${config.port}`
-                : config.enabled && config.connectionType === 'usb' && !config.usbVendorId
-                  ? 'Falta seleccionar dispositivo USB'
+                : config.enabled && config.connectionType === 'usb' && (!config.usbVendorId || !config.usbPrinterId)
+                  ? !config.usbVendorId ? 'Falta seleccionar dispositivo USB' : 'Falta vincular impresora del sistema'
                   : config.enabled && config.connectionType !== 'usb' && !config.ip
                     ? 'Falta configurar la IP'
                     : config.enabled
@@ -254,7 +257,11 @@ export default function PrinterSetupScreen() {
         <View style={styles.toggleRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.sectionTitle}>Este dispositivo imprime</Text>
-            <Text style={styles.sectionSub}>Recibe jobs vía socket y los envía por TCP a la impresora</Text>
+            <Text style={styles.sectionSub}>
+              {config.connectionType === 'usb'
+                ? 'Recibe jobs vía socket y los envía por USB OTG'
+                : 'Recibe jobs vía socket y los envía por TCP a la impresora'}
+            </Text>
           </View>
           <Switch
             value={config.enabled}
@@ -360,13 +367,17 @@ export default function PrinterSetupScreen() {
             </Card>
           )}
 
-          {/* Printer selector (TCP) — Admin/Manager only */}
-          {config.connectionType !== 'usb' && canReadPrinters && (
+          {/* Selector de impresora del sistema — TCP y USB, Admin/Manager */}
+          {canReadPrinters && (
             <Card style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Impresora del sistema</Text>
-                  <Text style={styles.sectionSub}>Selecciona para autocompletar IP y eventos</Text>
+                  <Text style={styles.sectionSub}>
+                    {config.connectionType === 'usb'
+                      ? 'Vincula este dispositivo USB a una impresora del sistema'
+                      : 'Selecciona para autocompletar IP y eventos'}
+                  </Text>
                 </View>
                 <Pressable onPress={fetchPrinters} style={styles.refreshBtn}>
                   {loadingPrinters
@@ -378,7 +389,13 @@ export default function PrinterSetupScreen() {
               <Pressable style={styles.pickerBtn} onPress={() => setShowPrinterPicker(!showPrinterPicker)}>
                 <Printer size={16} color={selectedPrinter ? Colors.accent : Colors.textTertiary} />
                 <Text style={[styles.pickerText, !selectedPrinter && styles.pickerPlaceholder]}>
-                  {selectedPrinter ? `${selectedPrinter.name} — ${selectedPrinter.address}` : 'Seleccionar impresora...'}
+                  {config.connectionType === 'usb'
+                    ? config.usbPrinterName
+                      ? `${config.usbPrinterName} (vinculada)`
+                      : 'Vincular a impresora del sistema...'
+                    : selectedPrinter
+                      ? `${selectedPrinter.name} — ${selectedPrinter.address}`
+                      : 'Seleccionar impresora...'}
                 </Text>
                 <ChevronDown size={16} color={Colors.textTertiary} />
               </Pressable>
